@@ -37,7 +37,6 @@
 #include <QStandardPaths>
 #include "settings.h"
 #include "application.h"
-#include "desktopentrydialog.h"
 #include <QTimer>
 #include <QDebug>
 
@@ -1093,27 +1092,6 @@ void TabPage::goToCustomizedViewSource() {
     }
 }
 
-void TabPage::createShortcut() {
-    if(folder_ && folder_->isLoaded()) {
-        auto folderPath = folder_->path();
-        if(folderPath && folderPath.isNative()) {
-            DesktopEntryDialog* dlg = new DesktopEntryDialog(this, folderPath);
-            dlg->setAttribute(Qt::WA_DeleteOnClose);
-            connect(dlg, &DesktopEntryDialog::desktopEntryCreated, [this] (const Fm::FilePath& parent, const QString& name) {
-                // if the current directory does not have a file monitor or is changed,
-                // there will be no point to tracking the created shortcut
-                if(folder_ && folder_->hasFileMonitor() && folder_->path() == parent) {
-                    filesToTrust_ << name;
-                }
-            });
-            dlg->show();
-            if(!static_cast<Application*>(qApp)->underWayland()) {
-                dlg->raise();
-                dlg->activateWindow();
-            }
-        }
-    }
-}
 
 bool TabPage::canOpenAdmin() {
     /* NOTE: "admin:///" requires a special handling because it first needs an invisible mount

@@ -9,13 +9,10 @@ set(pcmanfm_SRCS
     launcher.cpp
     preferencesdialog.cpp
     xdgdir.cpp
-    desktoppreferencesdialog.cpp
-    desktopwindow.cpp
     autorundialog.cpp
     connectserverdialog.cpp
     settings.cpp
     bulkrename.cpp
-    desktopentrydialog.cpp
 )
 
 qt6_add_dbus_adaptor(pcmanfm_DBUS_SRCS
@@ -44,12 +41,9 @@ set(pcmanfm_UIS
     about.ui
     shortcuts.ui
     preferences.ui
-    desktop-preferences.ui
-    desktop-folder.ui
     autorun.ui
     connect.ui
     bulk-rename.ui
-    desktopentrydialog.ui
 )
 
 # add translation for pcmanfm-qt
@@ -59,11 +53,10 @@ lxqt_translate_ts(QM_FILES
     INSTALL_DIR "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/translations"
 )
 
-# translate desktop entry files for pcmanfm-qt and desktop preferences
+# translate desktop entry file for pcmanfm-qt
 lxqt_translate_desktop(DESKTOP_FILES
     SOURCES
         pcmanfm-qt.desktop.in
-        pcmanfm-qt-desktop-pref.desktop.in
     USE_YAML
 )
 
@@ -90,7 +83,6 @@ target_include_directories(pcmanfm-qt
 target_link_libraries(pcmanfm-qt
     Qt6::Widgets
     Qt6::DBus
-    LayerShellQtInterface
     fm-qt6
 )
 

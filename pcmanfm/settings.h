@@ -17,126 +17,78 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-
 #ifndef PCMANFM_SETTINGS_H
 #define PCMANFM_SETTINGS_H
 
-#include <QObject>
-#include <libfm-qt6/folderview.h>
-#include <libfm-qt6/foldermodel.h>
-#include "desktopwindow.h"
-#include <libfm-qt6/sidepane.h>
-#include <libfm-qt6/core/thumbnailjob.h>
 #include <libfm-qt6/core/archiver.h>
 #include <libfm-qt6/core/legacy/fm-config.h>
+#include <libfm-qt6/core/thumbnailjob.h>
+#include <libfm-qt6/foldermodel.h>
+#include <libfm-qt6/folderview.h>
+#include <libfm-qt6/sidepane.h>
+
+#include <QObject>
 
 namespace PCManFM {
 
-enum OpenDirTargetType {
-    OpenInCurrentTab,
-    OpenInNewTab,
-    OpenInNewWindow,
-    OpenInLastActiveWindow
-};
+enum OpenDirTargetType { OpenInCurrentTab, OpenInNewTab, OpenInNewWindow, OpenInLastActiveWindow };
 
 class FolderSettings {
-public:
-    FolderSettings():
-        isCustomized_(false),
-        // NOTE: The default values of the following variables should be
-        // the same as those of their corresponding variables in Settings:
-        sortOrder_(Qt::AscendingOrder),
-        sortColumn_(Fm::FolderModel::ColumnFileName),
-        viewMode_(Fm::FolderView::IconMode),
-        showHidden_(false),
-        sortFolderFirst_(true),
-        sortHiddenLast_(false),
-        sortCaseSensitive_(true),
-        recursive_(false) {
-    }
+   public:
+    FolderSettings()
+        : isCustomized_(false),
+          // NOTE: The default values of the following variables should be
+          // the same as those of their corresponding variables in Settings:
+          sortOrder_(Qt::AscendingOrder),
+          sortColumn_(Fm::FolderModel::ColumnFileName),
+          viewMode_(Fm::FolderView::IconMode),
+          showHidden_(false),
+          sortFolderFirst_(true),
+          sortHiddenLast_(false),
+          sortCaseSensitive_(true),
+          recursive_(false) {}
 
-    bool isCustomized() const {
-        return isCustomized_;
-    }
+    bool isCustomized() const { return isCustomized_; }
 
-    void setCustomized(bool value) {
-        isCustomized_ = value;
-    }
+    void setCustomized(bool value) { isCustomized_ = value; }
 
-    Qt::SortOrder sortOrder() const {
-        return sortOrder_;
-    }
+    Qt::SortOrder sortOrder() const { return sortOrder_; }
 
-    void setSortOrder(Qt::SortOrder value) {
-        sortOrder_ = value;
-    }
+    void setSortOrder(Qt::SortOrder value) { sortOrder_ = value; }
 
-    Fm::FolderModel::ColumnId sortColumn() const {
-        return sortColumn_;
-    }
+    Fm::FolderModel::ColumnId sortColumn() const { return sortColumn_; }
 
-    void setSortColumn(Fm::FolderModel::ColumnId value) {
-        sortColumn_ = value;
-    }
+    void setSortColumn(Fm::FolderModel::ColumnId value) { sortColumn_ = value; }
 
-    Fm::FolderView::ViewMode viewMode() const {
-        return viewMode_;
-    }
+    Fm::FolderView::ViewMode viewMode() const { return viewMode_; }
 
-    void setViewMode(Fm::FolderView::ViewMode value) {
-        viewMode_ = value;
-    }
+    void setViewMode(Fm::FolderView::ViewMode value) { viewMode_ = value; }
 
-    bool sortFolderFirst() const {
-        return sortFolderFirst_;
-    }
+    bool sortFolderFirst() const { return sortFolderFirst_; }
 
-    void setSortFolderFirst(bool value) {
-        sortFolderFirst_ = value;
-    }
+    void setSortFolderFirst(bool value) { sortFolderFirst_ = value; }
 
-    bool sortHiddenLast() const {
-        return sortHiddenLast_;
-    }
+    bool sortHiddenLast() const { return sortHiddenLast_; }
 
-    void setSortHiddenLast(bool value) {
-        sortHiddenLast_ = value;
-    }
+    void setSortHiddenLast(bool value) { sortHiddenLast_ = value; }
 
-    bool showHidden() const {
-        return showHidden_;
-    }
+    bool showHidden() const { return showHidden_; }
 
-    void setShowHidden(bool value) {
-        showHidden_ = value;
-    }
+    void setShowHidden(bool value) { showHidden_ = value; }
 
-    bool sortCaseSensitive() const {
-        return sortCaseSensitive_;
-    }
+    bool sortCaseSensitive() const { return sortCaseSensitive_; }
 
-    void setSortCaseSensitive(bool value) {
-        sortCaseSensitive_ = value;
-    }
+    void setSortCaseSensitive(bool value) { sortCaseSensitive_ = value; }
 
-    bool recursive() const {
-        return recursive_;
-    }
+    bool recursive() const { return recursive_; }
 
-    void setRecursive(bool value) {
-        recursive_ = value;
-    }
+    void setRecursive(bool value) { recursive_ = value; }
 
-    Fm::FilePath inheritedPath() const {
-        return inheritedPath_;
-    }
+    Fm::FilePath inheritedPath() const { return inheritedPath_; }
 
-    void seInheritedPath(const Fm::FilePath& path) {
-        inheritedPath_ = std::move(path);
-    }
+    void seInheritedPath(const Fm::FilePath& path) { inheritedPath_ = std::move(path); }
 
-
-private:
+   private:
     bool isCustomized_;
     Qt::SortOrder sortOrder_;
     Fm::FolderModel::ColumnId sortColumn_;
@@ -150,15 +102,10 @@ private:
     // columns?
 };
 
-
 class Settings : public QObject {
     Q_OBJECT
-public:
-    enum IconType {
-        Small,
-        Big,
-        Thumbnail
-    };
+   public:
+    enum IconType { Small, Big, Thumbnail };
 
     Settings();
     virtual ~Settings();
@@ -167,718 +114,286 @@ public:
     bool save(QString profile = QString());
 
     static QString xdgUserConfigDir();
-    static const QList<int> & iconSizes(IconType type);
+    static const QList<int>& iconSizes(IconType type);
     static int wallpaperModeFromString(const QString str);
 
     QString profileDir(QString profile, bool useFallback = false);
 
     // setter/getter functions
-    QString profileName() const {
-        return profileName_;
-    }
+    QString profileName() const { return profileName_; }
 
-    bool supportTrash() const {
-        return supportTrash_;
-    }
+    bool supportTrash() const { return supportTrash_; }
 
-    QString fallbackIconThemeName() const {
-        return fallbackIconThemeName_;
-    }
+    QString fallbackIconThemeName() const { return fallbackIconThemeName_; }
 
-    bool useFallbackIconTheme() const {
-        return useFallbackIconTheme_;
-    }
+    bool useFallbackIconTheme() const { return useFallbackIconTheme_; }
 
-    void setFallbackIconThemeName(QString iconThemeName) {
-        fallbackIconThemeName_ = iconThemeName;
-    }
+    void setFallbackIconThemeName(QString iconThemeName) { fallbackIconThemeName_ = iconThemeName; }
 
-    bool singleWindowMode() const {
-        return singleWindowMode_;
-    }
+    bool singleWindowMode() const { return singleWindowMode_; }
 
-    void setSingleWindowMode(bool singleWindowMode) {
-        singleWindowMode_ = singleWindowMode;
-    }
+    void setSingleWindowMode(bool singleWindowMode) { singleWindowMode_ = singleWindowMode; }
 
-    OpenDirTargetType bookmarkOpenMethod() {
-        return bookmarkOpenMethod_;
-    }
+    OpenDirTargetType bookmarkOpenMethod() { return bookmarkOpenMethod_; }
 
-    void setBookmarkOpenMethod(OpenDirTargetType bookmarkOpenMethod) {
-        bookmarkOpenMethod_ = bookmarkOpenMethod;
-    }
+    void setBookmarkOpenMethod(OpenDirTargetType bookmarkOpenMethod) { bookmarkOpenMethod_ = bookmarkOpenMethod; }
 
-    QString suCommand() const {
-        return suCommand_;
-    }
+    QString suCommand() const { return suCommand_; }
 
-    void setSuCommand(QString suCommand) {
-        suCommand_ = suCommand;
-    }
+    void setSuCommand(QString suCommand) { suCommand_ = suCommand; }
 
-    QString terminal() {
-        return terminal_;
-    }
+    QString terminal() { return terminal_; }
     void setTerminal(QString terminalCommand);
 
-    QString archiver() const {
-        return archiver_;
-    }
+    QString archiver() const { return archiver_; }
 
     void setArchiver(QString archiver) {
         archiver_ = archiver;
         Fm::Archiver::setDefaultArchiverByName(archiver_.toLocal8Bit().constData());
     }
 
-    bool mountOnStartup() const {
-        return mountOnStartup_;
-    }
-
-    void setMountOnStartup(bool mountOnStartup) {
-        mountOnStartup_ = mountOnStartup;
-    }
-
-    bool mountRemovable() {
-        return mountRemovable_;
-    }
-
-    void setMountRemovable(bool mountRemovable) {
-        mountRemovable_ = mountRemovable;
-    }
-
-    bool autoRun() const {
-        return autoRun_;
-    }
-
-    void setAutoRun(bool autoRun) {
-        autoRun_ = autoRun;
-    }
-
-    bool closeOnUnmount() const {
-        return closeOnUnmount_;
-    }
-
-    void setCloseOnUnmount(bool value) {
-        closeOnUnmount_ = value;
-    }
-
-    DesktopWindow::WallpaperMode wallpaperMode() const {
-        return DesktopWindow::WallpaperMode(wallpaperMode_);
-    }
-
-    void setWallpaperMode(int wallpaperMode) {
-        wallpaperMode_ = wallpaperMode;
-    }
-
-    QString wallpaper() const {
-        return wallpaper_;
-    }
-
-    void setWallpaper(const QString& wallpaper) {
-        wallpaper_ = wallpaper;
-    }
-
-    QSize wallpaperDialogSize() const {
-        return wallpaperDialogSize_;
-    }
-
-    void setWallpaperDialogSize(const QSize& size) {
-        wallpaperDialogSize_ = size;
-    }
-
-    int wallpaperDialogSplitterPos() const {
-        return wallpaperDialogSplitterPos_;
-    }
-
-    void setWallpaperDialogSplitterPos(int pos) {
-        wallpaperDialogSplitterPos_ = pos;
-    }
-
-    QString wallpaperDir() const {
-        return wallpaperDir_;
-    }
-
-    void setLastSlide(QString wallpaper) {
-        lastSlide_ = wallpaper;
-    }
-
-    QString lastSlide() const {
-        return lastSlide_;
-    }
-
-    void setWallpaperDir(QString dir) {
-        wallpaperDir_ = dir;
-    }
-
-    int slideShowInterval() const {
-        return slideShowInterval_;
-    }
-
-    void setSlideShowInterval(int interval) {
-        slideShowInterval_ = interval;
-    }
-
-    bool wallpaperRandomize() const {
-       return wallpaperRandomize_;
-    }
-
-    void setWallpaperRandomize(bool randomize) {
-        wallpaperRandomize_ = randomize;
-    }
-
-    bool transformWallpaper() const {
-       return transformWallpaper_;
-    }
-
-    void setTransformWallpaper(bool tr) {
-        transformWallpaper_ = tr;
-    }
-
-    bool perScreenWallpaper() const {
-       return perScreenWallpaper_;
-    }
-
-    void setPerScreenWallpaper(bool tr) {
-        perScreenWallpaper_ = tr;
-    }
-
-    const QColor& desktopBgColor() const {
-        return desktopBgColor_;
-    }
-
-    void setDesktopBgColor(QColor desktopBgColor) {
-        desktopBgColor_ = desktopBgColor;
-    }
-
-    const QColor& desktopFgColor() const {
-        return desktopFgColor_;
-    }
-
-    void setDesktopFgColor(QColor desktopFgColor) {
-        desktopFgColor_ = desktopFgColor;
-    }
-
-    const QColor& desktopShadowColor() const {
-        return desktopShadowColor_;
-    }
-
-    void setDesktopShadowColor(QColor desktopShadowColor) {
-        desktopShadowColor_ = desktopShadowColor;
-    }
-
-    QFont desktopFont() const {
-        return desktopFont_;
-    }
-
-    void setDesktopFont(QFont font) {
-        desktopFont_ = font;
-    }
-
-    int desktopIconSize() const {
-        return desktopIconSize_;
-    }
-
-    void setDesktopIconSize(int desktopIconSize) {
-        desktopIconSize_ = desktopIconSize;
-    }
-
-    QStringList desktopShortcuts() const {
-        return desktopShortcuts_;
-    }
-
-    void setDesktopShortcuts(const QStringList& list) {
-        desktopShortcuts_ = list;
-    }
-
-    bool desktopShowHidden() const {
-        return desktopShowHidden_;
-    }
-
-    void setDesktopShowHidden(bool desktopShowHidden) {
-        desktopShowHidden_ = desktopShowHidden;
-    }
-
-    bool desktopHideItems(const QString& screenName = QString()) const {
-        if(screenName.isEmpty()) { // X11
-            return desktopHideItems_;
-        }
-        return desktopHideItemsOnScreens_.value(screenName, false); // Wayland
-    }
-
-    void setDesktopHideItems(bool hide, const QString& screenName = QString()) {
-        if(screenName.isEmpty()) { // X11
-            desktopHideItems_ = hide;
-        }
-        else { // Wayland
-            if(!screenNames_.contains(screenName)) {
-                screenNames_ << screenName;
-            }
-            desktopHideItemsOnScreens_.insert(screenName, hide);
-        }
-    }
-
-    Qt::SortOrder desktopSortOrder() const {
-        return desktopSortOrder_;
-    }
-
-    void setDesktopSortOrder(Qt::SortOrder desktopSortOrder) {
-        desktopSortOrder_ = desktopSortOrder;
-    }
-
-    Fm::FolderModel::ColumnId desktopSortColumn() const {
-        return desktopSortColumn_;
-    }
-
-    void setDesktopSortColumn(Fm::FolderModel::ColumnId desktopSortColumn) {
-        desktopSortColumn_ = desktopSortColumn;
-    }
-
-    bool desktopSortFolderFirst() const {
-        return desktopSortFolderFirst_;
-    }
-
-    void setDesktopSortFolderFirst(bool desktopFolderFirst) {
-        desktopSortFolderFirst_ = desktopFolderFirst;
-    }
-
-    bool desktopSortHiddenLast() const {
-        return desktopSortHiddenLast_;
-    }
-
-    void setDesktopSortHiddenLast(bool desktopHiddenLast) {
-        desktopSortHiddenLast_ = desktopHiddenLast;
-    }
-
-    bool desktopNoTooltip() const {
-        return desktopNoTooltip_;
-    }
-
-    void setDesktopNoTooltip(bool noTooltip) {
-        desktopNoTooltip_ = noTooltip;
-    }
-
-    bool alwaysShowTabs() const {
-        return alwaysShowTabs_;
-    }
-
-    void setAlwaysShowTabs(bool alwaysShowTabs) {
-        alwaysShowTabs_ = alwaysShowTabs;
-    }
-
-    bool showTabClose() const {
-        return showTabClose_;
-    }
-
-    void setShowTabClose(bool showTabClose) {
-        showTabClose_ = showTabClose;
-    }
-
-    bool switchToNewTab() const {
-        return switchToNewTab_;
-    }
-
-    void setSwitchToNewTab(bool showTabClose) {
-        switchToNewTab_ = showTabClose;
-    }
-
-    bool reopenLastTabs() const {
-        return reopenLastTabs_;
-    }
-
-    void setReopenLastTabs(bool reopenLastTabs) {
-        reopenLastTabs_ = reopenLastTabs;
-    }
-
-    int splitViewTabsNum() const {
-        return splitViewTabsNum_;
-    }
-
-    void setSplitViewTabsNum(int n) {
-        splitViewTabsNum_ = n;
-    }
-
-    QStringList tabPaths() const {
-        return tabPaths_;
-    }
-
-    void setTabPaths(const QStringList& tabPaths) {
-        tabPaths_ = tabPaths;
-    }
-
-    bool rememberWindowSize() const {
-        return rememberWindowSize_;
-    }
-
-    void setRememberWindowSize(bool rememberWindowSize) {
-        rememberWindowSize_ = rememberWindowSize;
-    }
+    bool mountOnStartup() const { return mountOnStartup_; }
+
+    void setMountOnStartup(bool mountOnStartup) { mountOnStartup_ = mountOnStartup; }
+
+    bool mountRemovable() { return mountRemovable_; }
+
+    void setMountRemovable(bool mountRemovable) { mountRemovable_ = mountRemovable; }
+
+    bool autoRun() const { return autoRun_; }
+
+    void setAutoRun(bool autoRun) { autoRun_ = autoRun; }
+
+    bool closeOnUnmount() const { return closeOnUnmount_; }
+
+    void setCloseOnUnmount(bool value) { closeOnUnmount_ = value; }
+
+    bool alwaysShowTabs() const { return alwaysShowTabs_; }
+
+    void setAlwaysShowTabs(bool alwaysShowTabs) { alwaysShowTabs_ = alwaysShowTabs; }
+
+    bool showTabClose() const { return showTabClose_; }
+
+    void setShowTabClose(bool showTabClose) { showTabClose_ = showTabClose; }
+
+    bool switchToNewTab() const { return switchToNewTab_; }
+
+    void setSwitchToNewTab(bool showTabClose) { switchToNewTab_ = showTabClose; }
+
+    bool reopenLastTabs() const { return reopenLastTabs_; }
+
+    void setReopenLastTabs(bool reopenLastTabs) { reopenLastTabs_ = reopenLastTabs; }
+
+    int splitViewTabsNum() const { return splitViewTabsNum_; }
+
+    void setSplitViewTabsNum(int n) { splitViewTabsNum_ = n; }
+
+    QStringList tabPaths() const { return tabPaths_; }
+
+    void setTabPaths(const QStringList& tabPaths) { tabPaths_ = tabPaths; }
+
+    bool rememberWindowSize() const { return rememberWindowSize_; }
+
+    void setRememberWindowSize(bool rememberWindowSize) { rememberWindowSize_ = rememberWindowSize; }
 
     int windowWidth() const {
-        if(rememberWindowSize_) {
+        if (rememberWindowSize_) {
             return lastWindowWidth_;
-        }
-        else {
+        } else {
             return fixedWindowWidth_;
         }
     }
 
     int windowHeight() const {
-        if(rememberWindowSize_) {
+        if (rememberWindowSize_) {
             return lastWindowHeight_;
-        }
-        else {
+        } else {
             return fixedWindowHeight_;
         }
     }
 
     bool windowMaximized() const {
-        if(rememberWindowSize_) {
+        if (rememberWindowSize_) {
             return lastWindowMaximized_;
-        }
-        else {
+        } else {
             return false;
         }
     }
 
-    int fixedWindowWidth() const {
-        return fixedWindowWidth_;
-    }
+    int fixedWindowWidth() const { return fixedWindowWidth_; }
 
-    void setFixedWindowWidth(int fixedWindowWidth) {
-        fixedWindowWidth_ = fixedWindowWidth;
-    }
+    void setFixedWindowWidth(int fixedWindowWidth) { fixedWindowWidth_ = fixedWindowWidth; }
 
-    int fixedWindowHeight() const {
-        return fixedWindowHeight_;
-    }
+    int fixedWindowHeight() const { return fixedWindowHeight_; }
 
-    void setFixedWindowHeight(int fixedWindowHeight) {
-        fixedWindowHeight_ = fixedWindowHeight;
-    }
+    void setFixedWindowHeight(int fixedWindowHeight) { fixedWindowHeight_ = fixedWindowHeight; }
 
-    void setLastWindowWidth(int lastWindowWidth) {
-        lastWindowWidth_ = lastWindowWidth;
-    }
+    void setLastWindowWidth(int lastWindowWidth) { lastWindowWidth_ = lastWindowWidth; }
 
-    void setLastWindowHeight(int lastWindowHeight) {
-        lastWindowHeight_ = lastWindowHeight;
-    }
+    void setLastWindowHeight(int lastWindowHeight) { lastWindowHeight_ = lastWindowHeight; }
 
-    void setLastWindowMaximized(bool lastWindowMaximized) {
-        lastWindowMaximized_ = lastWindowMaximized;
-    }
+    void setLastWindowMaximized(bool lastWindowMaximized) { lastWindowMaximized_ = lastWindowMaximized; }
 
-    int splitterPos() const {
-        return splitterPos_;
-    }
+    int splitterPos() const { return splitterPos_; }
 
-    void setSplitterPos(int splitterPos) {
-        splitterPos_ = splitterPos;
-    }
+    void setSplitterPos(int splitterPos) { splitterPos_ = splitterPos; }
 
-    bool isSidePaneVisible() const {
-        return sidePaneVisible_;
-    }
+    bool isSidePaneVisible() const { return sidePaneVisible_; }
 
-    void showSidePane(bool show) {
-        sidePaneVisible_ = show;
-    }
+    void showSidePane(bool show) { sidePaneVisible_ = show; }
 
-    Fm::SidePane::Mode sidePaneMode() const {
-        return sidePaneMode_;
-    }
+    Fm::SidePane::Mode sidePaneMode() const { return sidePaneMode_; }
 
-    void setSidePaneMode(Fm::SidePane::Mode sidePaneMode) {
-        sidePaneMode_ = sidePaneMode;
-    }
+    void setSidePaneMode(Fm::SidePane::Mode sidePaneMode) { sidePaneMode_ = sidePaneMode; }
 
-    bool showMenuBar() const {
-        return showMenuBar_;
-    }
+    bool showMenuBar() const { return showMenuBar_; }
 
-    void setShowMenuBar(bool showMenuBar) {
-        showMenuBar_ = showMenuBar;
-    }
+    void setShowMenuBar(bool showMenuBar) { showMenuBar_ = showMenuBar; }
 
-    bool splitView() const {
-        return splitView_;
-    }
+    bool splitView() const { return splitView_; }
 
-    void setSplitView(bool split) {
-        splitView_ = split;
-    }
+    void setSplitView(bool split) { splitView_ = split; }
 
-    Fm::FolderView::ViewMode viewMode() const {
-        return viewMode_;
-    }
+    Fm::FolderView::ViewMode viewMode() const { return viewMode_; }
 
-    void setViewMode(Fm::FolderView::ViewMode viewMode) {
-        viewMode_ = viewMode;
-    }
+    void setViewMode(Fm::FolderView::ViewMode viewMode) { viewMode_ = viewMode; }
 
-    bool showHidden() const {
-        return showHidden_;
-    }
+    bool showHidden() const { return showHidden_; }
 
-    void setShowHidden(bool showHidden) {
-        showHidden_ = showHidden;
-    }
+    void setShowHidden(bool showHidden) { showHidden_ = showHidden; }
 
-    bool sortCaseSensitive() const {
-        return sortCaseSensitive_;
-    }
+    bool sortCaseSensitive() const { return sortCaseSensitive_; }
 
-    void setSortCaseSensitive(bool value) {
-        sortCaseSensitive_ = value;
-    }
+    void setSortCaseSensitive(bool value) { sortCaseSensitive_ = value; }
 
-    QSet<QString> getHiddenPlaces() const {
-        return hiddenPlaces_;
-    }
+    QSet<QString> getHiddenPlaces() const { return hiddenPlaces_; }
 
     void setHiddenPlace(const QString& str, bool hide) {
-        if(hide) {
+        if (hide) {
             hiddenPlaces_ << str;
-        }
-        else {
+        } else {
             hiddenPlaces_.remove(str);
         }
     }
 
-    Qt::SortOrder sortOrder() const {
-        return sortOrder_;
-    }
+    Qt::SortOrder sortOrder() const { return sortOrder_; }
 
-    void setSortOrder(Qt::SortOrder sortOrder) {
-        sortOrder_ = sortOrder;
-    }
+    void setSortOrder(Qt::SortOrder sortOrder) { sortOrder_ = sortOrder; }
 
-    Fm::FolderModel::ColumnId sortColumn() const {
-        return sortColumn_;
-    }
+    Fm::FolderModel::ColumnId sortColumn() const { return sortColumn_; }
 
-    void setSortColumn(Fm::FolderModel::ColumnId sortColumn) {
-        sortColumn_ = sortColumn;
-    }
+    void setSortColumn(Fm::FolderModel::ColumnId sortColumn) { sortColumn_ = sortColumn; }
 
-    bool sortFolderFirst() const {
-        return sortFolderFirst_;
-    }
+    bool sortFolderFirst() const { return sortFolderFirst_; }
 
-    void setSortFolderFirst(bool folderFirst) {
-        sortFolderFirst_ = folderFirst;
-    }
+    void setSortFolderFirst(bool folderFirst) { sortFolderFirst_ = folderFirst; }
 
-    bool sortHiddenLast() const {
-        return sortHiddenLast_;
-    }
+    bool sortHiddenLast() const { return sortHiddenLast_; }
 
-    void setSortHiddenLast(bool hiddenLast) {
-        sortHiddenLast_ = hiddenLast;
-    }
+    void setSortHiddenLast(bool hiddenLast) { sortHiddenLast_ = hiddenLast; }
 
-    bool showFilter() const {
-        return showFilter_;
-    }
+    bool showFilter() const { return showFilter_; }
 
-    void setShowFilter(bool value) {
-        showFilter_ = value;
-    }
+    void setShowFilter(bool value) { showFilter_ = value; }
 
-    bool pathBarButtons() const {
-        return pathBarButtons_;
-    }
+    bool pathBarButtons() const { return pathBarButtons_; }
 
-    void setPathBarButtons(bool value) {
-        pathBarButtons_ = value;
-    }
+    void setPathBarButtons(bool value) { pathBarButtons_ = value; }
 
     // settings for use with libfm
-    bool singleClick() const {
-        return singleClick_;
-    }
+    bool singleClick() const { return singleClick_; }
 
-    void setSingleClick(bool singleClick) {
-        singleClick_ = singleClick;
-    }
+    void setSingleClick(bool singleClick) { singleClick_ = singleClick; }
 
-    int autoSelectionDelay() const {
-        return autoSelectionDelay_;
-    }
+    int autoSelectionDelay() const { return autoSelectionDelay_; }
 
-    void setAutoSelectionDelay(int value) {
-        autoSelectionDelay_ = value;
-    }
+    void setAutoSelectionDelay(int value) { autoSelectionDelay_ = value; }
 
-    bool ctrlRightClick() const {
-        return ctrlRightClick_;
-    }
+    bool ctrlRightClick() const { return ctrlRightClick_; }
 
-    void setCtrlRightClick(bool value) {
-        ctrlRightClick_ = value;
-    }
+    void setCtrlRightClick(bool value) { ctrlRightClick_ = value; }
 
     bool useTrash() const {
-        if(!supportTrash_) {
+        if (!supportTrash_) {
             return false;
         }
         return useTrash_;
     }
 
-    void setUseTrash(bool useTrash) {
-        useTrash_ = useTrash;
-    }
+    void setUseTrash(bool useTrash) { useTrash_ = useTrash; }
 
-    bool confirmDelete() const {
-        return confirmDelete_;
-    }
+    bool confirmDelete() const { return confirmDelete_; }
 
-    void setConfirmDelete(bool confirmDelete) {
-        confirmDelete_ = confirmDelete;
-    }
+    void setConfirmDelete(bool confirmDelete) { confirmDelete_ = confirmDelete; }
 
-    bool noUsbTrash() const {
-        return noUsbTrash_;
-    }
+    bool noUsbTrash() const { return noUsbTrash_; }
 
     void setNoUsbTrash(bool noUsbTrash) {
         noUsbTrash_ = noUsbTrash;
-        fm_config->no_usb_trash = noUsbTrash_; // also set this to libfm since FmFileOpsJob reads this config value before trashing files.
+        fm_config->no_usb_trash =
+            noUsbTrash_;  // also set this to libfm since FmFileOpsJob reads this config value before trashing files.
     }
 
-    bool confirmTrash() const {
-        return confirmTrash_;
-    }
+    bool confirmTrash() const { return confirmTrash_; }
 
-    void setConfirmTrash(bool value) {
-        confirmTrash_ = value;
-    }
+    void setConfirmTrash(bool value) { confirmTrash_ = value; }
 
-    bool quickExec() const {
-        return quickExec_;
-    }
+    bool quickExec() const { return quickExec_; }
 
     void setQuickExec(bool value) {
         quickExec_ = value;
         fm_config->quick_exec = quickExec_;
     }
 
-    bool selectNewFiles() const {
-        return selectNewFiles_;
-    }
+    bool selectNewFiles() const { return selectNewFiles_; }
 
-    void setSelectNewFiles(bool value) {
-        selectNewFiles_ = value;
-    }
+    void setSelectNewFiles(bool value) { selectNewFiles_ = value; }
 
-    int bigIconSize() const {
-        return bigIconSize_;
-    }
+    int bigIconSize() const { return bigIconSize_; }
 
-    void setBigIconSize(int bigIconSize) {
-        bigIconSize_ = bigIconSize;
-    }
+    void setBigIconSize(int bigIconSize) { bigIconSize_ = bigIconSize; }
 
-    int smallIconSize() const {
-        return smallIconSize_;
-    }
+    int smallIconSize() const { return smallIconSize_; }
 
-    void setSmallIconSize(int smallIconSize) {
-        smallIconSize_ = smallIconSize;
-    }
+    void setSmallIconSize(int smallIconSize) { smallIconSize_ = smallIconSize; }
 
-    int sidePaneIconSize() const {
-        return sidePaneIconSize_;
-    }
+    int sidePaneIconSize() const { return sidePaneIconSize_; }
 
-    void setSidePaneIconSize(int sidePaneIconSize) {
-        sidePaneIconSize_ = sidePaneIconSize;
-    }
+    void setSidePaneIconSize(int sidePaneIconSize) { sidePaneIconSize_ = sidePaneIconSize; }
 
-    int thumbnailIconSize() const {
-        return thumbnailIconSize_;
-    }
+    int thumbnailIconSize() const { return thumbnailIconSize_; }
 
-    QSize folderViewCellMargins() const {
-        return folderViewCellMargins_;
-    }
+    QSize folderViewCellMargins() const { return folderViewCellMargins_; }
 
-    void setFolderViewCellMargins(QSize size) {
-        folderViewCellMargins_ = size;
-    }
+    void setFolderViewCellMargins(QSize size) { folderViewCellMargins_ = size; }
 
-    QSize desktopCellMargins() const {
-        return desktopCellMargins_;
-    }
+    bool openWithDefaultFileManager() const { return openWithDefaultFileManager_; }
 
-    void setDesktopCellMargins(QSize size) {
-        desktopCellMargins_ = size;
-    }
+    void setOpenWithDefaultFileManager(bool open) { openWithDefaultFileManager_ = open; }
 
-    QMargins workAreaMargins() const {
-        return workAreaMargins_;
-    }
+    bool allSticky() const { return allSticky_; }
 
-    void setWorkAreaMargins(QMargins margins) {
-        workAreaMargins_ = margins;
-    }
+    void setAllSticky(bool sticky) { allSticky_ = sticky; }
 
-    bool openWithDefaultFileManager() const {
-        return openWithDefaultFileManager_;
-    }
+    bool showThumbnails() { return showThumbnails_; }
 
-    void setOpenWithDefaultFileManager(bool open) {
-        openWithDefaultFileManager_ = open;
-    }
+    void setShowThumbnails(bool show) { showThumbnails_ = show; }
 
-    bool allSticky() const {
-        return allSticky_;
-    }
+    void setThumbnailLocalFilesOnly(bool value) { Fm::ThumbnailJob::setLocalFilesOnly(value); }
 
-    void setAllSticky(bool sticky) {
-        allSticky_ = sticky;
-    }
+    bool thumbnailLocalFilesOnly() const { return Fm::ThumbnailJob::localFilesOnly(); }
 
-    bool showThumbnails() {
-        return showThumbnails_;
-    }
+    int maxThumbnailFileSize() const { return Fm::ThumbnailJob::maxThumbnailFileSize(); }
 
-    void setShowThumbnails(bool show) {
-        showThumbnails_ = show;
-    }
+    void setMaxThumbnailFileSize(int size) { Fm::ThumbnailJob::setMaxThumbnailFileSize(size); }
 
-    void setThumbnailLocalFilesOnly(bool value) {
-        Fm::ThumbnailJob::setLocalFilesOnly(value);
-    }
+    int maxExternalThumbnailFileSize() const { return Fm::ThumbnailJob::maxExternalThumbnailFileSize(); }
 
-    bool thumbnailLocalFilesOnly() const {
-        return Fm::ThumbnailJob::localFilesOnly();
-    }
+    void setMaxExternalThumbnailFileSize(int size) { Fm::ThumbnailJob::setMaxExternalThumbnailFileSize(size); }
 
-    int maxThumbnailFileSize() const {
-        return Fm::ThumbnailJob::maxThumbnailFileSize();
-    }
+    void setThumbnailIconSize(int thumbnailIconSize) { thumbnailIconSize_ = thumbnailIconSize; }
 
-    void setMaxThumbnailFileSize(int size) {
-        Fm::ThumbnailJob::setMaxThumbnailFileSize(size);
-    }
-
-    int maxExternalThumbnailFileSize() const {
-        return Fm::ThumbnailJob::maxExternalThumbnailFileSize();
-    }
-
-    void setMaxExternalThumbnailFileSize(int size) {
-        Fm::ThumbnailJob::setMaxExternalThumbnailFileSize(size);
-    }
-
-    void setThumbnailIconSize(int thumbnailIconSize) {
-        thumbnailIconSize_ = thumbnailIconSize;
-    }
-
-    bool siUnit() {
-        return siUnit_;
-    }
+    bool siUnit() { return siUnit_; }
 
     void setSiUnit(bool siUnit) {
         siUnit_ = siUnit;
@@ -886,68 +401,45 @@ public:
         fm_config->si_unit = (gboolean)siUnit_;
     }
 
-    bool backupAsHidden() const {
-        return backupAsHidden_;
-    }
+    bool backupAsHidden() const { return backupAsHidden_; }
 
     void setBackupAsHidden(bool value) {
         backupAsHidden_ = value;
-        fm_config->backup_as_hidden = backupAsHidden_; // also set this to libfm since fm_file_info_is_hidden() reads this value internally.
+        fm_config->backup_as_hidden =
+            backupAsHidden_;  // also set this to libfm since fm_file_info_is_hidden() reads this value internally.
     }
 
-    bool showFullNames() const {
-        return showFullNames_;
-    }
+    bool showFullNames() const { return showFullNames_; }
 
-    void setShowFullNames(bool value) {
-        showFullNames_ = value;
-    }
+    void setShowFullNames(bool value) { showFullNames_ = value; }
 
-    bool shadowHidden() const {
-        return shadowHidden_;
-    }
+    bool shadowHidden() const { return shadowHidden_; }
 
-    void setShadowHidden(bool value) {
-        shadowHidden_ = value;
-    }
+    void setShadowHidden(bool value) { shadowHidden_ = value; }
 
-    bool noItemTooltip() const {
-        return noItemTooltip_;
-    }
+    bool noItemTooltip() const { return noItemTooltip_; }
 
-    void setNoItemTooltip(bool noTooltip) {
-        noItemTooltip_ = noTooltip;
-    }
+    void setNoItemTooltip(bool noTooltip) { noItemTooltip_ = noTooltip; }
 
-    bool scrollPerPixel() const {
-        return scrollPerPixel_;
-    }
+    bool scrollPerPixel() const { return scrollPerPixel_; }
 
-    void setScrollPerPixel(bool perPixel) {
-        scrollPerPixel_ = perPixel;
-    }
+    void setScrollPerPixel(bool perPixel) { scrollPerPixel_ = perPixel; }
 
-    bool onlyUserTemplates() const {
-        return onlyUserTemplates_;
-    }
+    bool onlyUserTemplates() const { return onlyUserTemplates_; }
 
     void setOnlyUserTemplates(bool value) {
         onlyUserTemplates_ = value;
         fm_config->only_user_templates = onlyUserTemplates_;
     }
 
-    bool templateTypeOnce() const {
-        return templateTypeOnce_;
-    }
+    bool templateTypeOnce() const { return templateTypeOnce_; }
 
     void setTemplateTypeOnce(bool value) {
         templateTypeOnce_ = value;
         fm_config->template_type_once = templateTypeOnce_;
     }
 
-    bool templateRunApp() const {
-        return templateRunApp_;
-    }
+    bool templateRunApp() const { return templateRunApp_; }
 
     void setTemplateRunApp(bool value) {
         templateRunApp_ = value;
@@ -961,125 +453,91 @@ public:
 
     void clearFolderSettings(const Fm::FilePath& path) const;
 
-    bool searchNameCaseInsensitive() const {
-        return searchNameCaseInsensitive_;
-    }
+    bool searchNameCaseInsensitive() const { return searchNameCaseInsensitive_; }
 
-    void setSearchNameCaseInsensitive(bool caseInsensitive) {
-        searchNameCaseInsensitive_ = caseInsensitive;
-    }
+    void setSearchNameCaseInsensitive(bool caseInsensitive) { searchNameCaseInsensitive_ = caseInsensitive; }
 
-    bool searchContentCaseInsensitive() const {
-        return searchContentCaseInsensitive_;
-    }
+    bool searchContentCaseInsensitive() const { return searchContentCaseInsensitive_; }
 
-    void setsearchContentCaseInsensitive(bool caseInsensitive) {
-        searchContentCaseInsensitive_ = caseInsensitive;
-    }
+    void setsearchContentCaseInsensitive(bool caseInsensitive) { searchContentCaseInsensitive_ = caseInsensitive; }
 
-    bool searchNameRegexp() const {
-        return searchNameRegexp_;
-    }
+    bool searchNameRegexp() const { return searchNameRegexp_; }
 
-    void setSearchNameRegexp(bool reg) {
-        searchNameRegexp_ = reg;
-    }
+    void setSearchNameRegexp(bool reg) { searchNameRegexp_ = reg; }
 
-    bool searchContentRegexp() const {
-        return searchContentRegexp_;
-    }
+    bool searchContentRegexp() const { return searchContentRegexp_; }
 
-    void setSearchContentRegexp(bool reg) {
-        searchContentRegexp_ = reg;
-    }
+    void setSearchContentRegexp(bool reg) { searchContentRegexp_ = reg; }
 
-    bool searchRecursive() const {
-        return searchRecursive_;
-    }
+    bool searchRecursive() const { return searchRecursive_; }
 
-    void setSearchRecursive(bool rec) {
-        searchRecursive_ = rec;
-    }
+    void setSearchRecursive(bool rec) { searchRecursive_ = rec; }
 
-    bool searchhHidden() const {
-        return searchhHidden_;
-    }
+    bool searchhHidden() const { return searchhHidden_; }
 
-    void setSearchhHidden(bool hidden) {
-        searchhHidden_ = hidden;
-    }
+    void setSearchhHidden(bool hidden) { searchhHidden_ = hidden; }
 
-    int maxSearchHistory() const {
-        return maxSearchHistory_;
-    }
+    int maxSearchHistory() const { return maxSearchHistory_; }
 
     void setMaxSearchHistory(int max);
 
     void clearSearchHistory();
 
-    QStringList namePatterns() const {
-        return namePatterns_;
-    }
+    QStringList namePatterns() const { return namePatterns_; }
 
     void addNamePattern(const QString& pattern);
 
-    QStringList contentPatterns() const {
-        return contentPatterns_;
-    }
+    QStringList contentPatterns() const { return contentPatterns_; }
 
     void addContentPattern(const QString& pattern);
 
     QList<int> getCustomColumnWidths() const {
         QList<int> l;
-        for(auto width : std::as_const(customColumnWidths_)) {
+        for (auto width : std::as_const(customColumnWidths_)) {
             l << width.toInt();
         }
         return l;
     }
 
-    void setCustomColumnWidths(const QList<int> &widths) {
+    void setCustomColumnWidths(const QList<int>& widths) {
         customColumnWidths_.clear();
-        for(auto width : widths) {
+        for (auto width : widths) {
             customColumnWidths_ << QVariant(width);
         }
     }
 
     QList<int> getHiddenColumns() const {
         QList<int> l;
-        for(auto width : std::as_const(hiddenColumns_)) {
+        for (auto width : std::as_const(hiddenColumns_)) {
             l << width.toInt();
         }
         return l;
     }
 
-    void setHiddenColumns(const QList<int> &columns) {
+    void setHiddenColumns(const QList<int>& columns) {
         hiddenColumns_.clear();
-        for(auto column : columns) {
+        for (auto column : columns) {
             hiddenColumns_ << QVariant(column);
         }
     }
 
-    int getRecentFilesNumber() const {
-        return recentFilesNumber_;
-    }
+    int getRecentFilesNumber() const { return recentFilesNumber_; }
     void setRecentFilesNumber(int n);
 
-    QStringList getRecentFiles() const {
-        return recentFiles_;
-    }
+    QStringList getRecentFiles() const { return recentFiles_; }
     void clearRecentFiles();
     void addRecentFile(const QString& file);
 
     void loadRecentFiles();
     void saveRecentFiles();
 
-private:
+   private:
     bool loadFile(QString filePath);
     bool saveFile(QString filePath);
 
     int toIconSize(int size, IconType type) const;
 
-private:
+   private:
     QString profileName_;
     bool supportTrash_;
 
@@ -1096,37 +554,11 @@ private:
     bool autoRun_;
     bool closeOnUnmount_;
 
-    int wallpaperMode_;
-    QString wallpaper_;
-    QSize wallpaperDialogSize_;
-    int wallpaperDialogSplitterPos_;
-    QString lastSlide_;
-    QString wallpaperDir_;
-    int slideShowInterval_;
-    bool wallpaperRandomize_;
-    bool transformWallpaper_;
-    bool perScreenWallpaper_;
-    QColor desktopBgColor_;
-    QColor desktopFgColor_;
-    QColor desktopShadowColor_;
-    QFont desktopFont_;
-    int desktopIconSize_;
-    QStringList desktopShortcuts_;
-
-    bool desktopShowHidden_;
-    bool desktopHideItems_;
-    QHash<QString, bool> desktopHideItemsOnScreens_; // on Wayland
-    Qt::SortOrder desktopSortOrder_;
-    Fm::FolderModel::ColumnId desktopSortColumn_;
-    bool desktopSortFolderFirst_;
-    bool desktopSortHiddenLast_;
-    bool desktopNoTooltip_;
-
     bool alwaysShowTabs_;
     bool showTabClose_;
     bool switchToNewTab_;
     bool reopenLastTabs_;
-    int splitViewTabsNum_; // number of tabs in the first view frame when reopening last tabs
+    int splitViewTabsNum_;  // number of tabs in the first view frame when reopening last tabs
     QStringList tabPaths_;
     bool rememberWindowSize_;
     int fixedWindowWidth_;
@@ -1156,9 +588,9 @@ private:
     bool ctrlRightClick_;
     bool useTrash_;
     bool confirmDelete_;
-    bool noUsbTrash_; // do not trash files on usb removable devices
-    bool confirmTrash_; // Confirm before moving files into "trash can"
-    bool quickExec_; // Don't ask options on launch executable file
+    bool noUsbTrash_;    // do not trash files on usb removable devices
+    bool confirmTrash_;  // Confirm before moving files into "trash can"
+    bool quickExec_;     // Don't ask options on launch executable file
     bool selectNewFiles_;
 
     bool showThumbnails_;
@@ -1183,8 +615,6 @@ private:
     bool templateRunApp_;
 
     QSize folderViewCellMargins_;
-    QSize desktopCellMargins_;
-    QMargins workAreaMargins_;
 
     bool openWithDefaultFileManager_;
 
@@ -1208,10 +638,8 @@ private:
     // recent files
     int recentFilesNumber_;
     QStringList recentFiles_;
-
-    QStringList screenNames_; // on Wayland
 };
 
-}
+}  // namespace PCManFM
 
-#endif // PCMANFM_SETTINGS_H
+#endif  // PCMANFM_SETTINGS_H

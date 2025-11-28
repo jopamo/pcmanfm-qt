@@ -62,10 +62,6 @@ PreferencesDialog::PreferencesDialog(const QString& activePage, QWidget* parent)
 
     connect(ui.buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &PreferencesDialog::applySettings);
 
-    if(static_cast<Application*>(qApp)->underWayland()) {
-        ui.suCommand->setEnabled(false);
-        ui.suLabel->setEnabled(false);
-    }
 }
 
 PreferencesDialog::~PreferencesDialog() = default;

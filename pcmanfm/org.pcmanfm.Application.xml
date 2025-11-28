@@ -4,12 +4,6 @@
     <method name="preferences">
       <arg type="s" direction="in"/>
     </method>
-    <method name="desktopPrefrences">
-      <arg type="s" direction="in"/>
-    </method>
-    <method name="desktopManager">
-      <arg type="b" direction="in"/>
-    </method>
     <method name="launchFiles">
       <arg type="s" direction="in"/>
       <arg type="as" direction="in"/>
@@ -18,13 +12,8 @@
     </method>
     <method name="quit">
     </method>
-    <method name="setWallpaper">
-      <arg type="s" direction="in"/>
-      <arg type="s" direction="in"/>
-    </method>
     <method name="findFiles">
       <arg type="as" direction="in"/>
     </method>
-    <property name="desktopManagerEnabled" type="b" access="read"/>
   </interface>
 </node>

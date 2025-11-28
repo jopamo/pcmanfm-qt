@@ -385,9 +385,6 @@ MainWindow::MainWindow(Fm::FilePath path):
         setRTLIcons(true);
     }
 
-    if(static_cast<Application*>(qApp)->underWayland()) {
-        ui.actionOpenAsRoot->setEnabled(false);
-    }
 }
 
 MainWindow::~MainWindow() = default;
@@ -1024,8 +1021,6 @@ void MainWindow::on_actionShowThumbnails_triggered(bool checked) {
             }
         }
     }
-    // this setting is shared by Desktop too
-    static_cast<Application*>(qApp)->updateDesktopsFromSettings(false);
 }
 
 void MainWindow::on_actionByFileName_triggered(bool /*checked*/) {
@@ -2339,10 +2334,7 @@ void MainWindow::on_actionOpenTerminal_triggered() {
 }
 
 void MainWindow::on_actionCreateLauncher_triggered() {
-    TabPage* page = currentPage();
-    if(page) {
-        page->createShortcut();
-    }
+    // Desktop launcher creation is no longer supported
 }
 
 void MainWindow::on_actionCopyFullPath_triggered() {

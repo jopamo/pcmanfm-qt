@@ -24,7 +24,6 @@
 #include <QStringBuilder>
 #include <QSettings>
 #include <QApplication>
-#include "desktopwindow.h"
 #include <libfm-qt6/utilities.h>
 #include <libfm-qt6/core/folderconfig.h>
 #include <libfm-qt6/core/terminal.h>
@@ -36,8 +35,6 @@ namespace PCManFM {
 
 inline static const char* bookmarkOpenMethodToString(OpenDirTargetType value);
 inline static OpenDirTargetType bookmarkOpenMethodFromString(const QString str);
-
-inline static const char* wallpaperModeToString(int value);
 
 inline static const char* viewModeToString(Fm::FolderView::ViewMode value);
 inline static Fm::FolderView::ViewMode viewModeFromString(const QString str);
@@ -64,27 +61,6 @@ Settings::Settings():
     mountRemovable_(true),
     autoRun_(true),
     closeOnUnmount_(false),
-    wallpaperMode_(0),
-    wallpaper_(),
-    wallpaperDialogSize_(QSize(700, 500)),
-    wallpaperDialogSplitterPos_(200),
-    lastSlide_(),
-    wallpaperDir_(),
-    slideShowInterval_(0),
-    wallpaperRandomize_(false),
-    transformWallpaper_(false),
-    perScreenWallpaper_(false),
-    desktopBgColor_(),
-    desktopFgColor_(),
-    desktopShadowColor_(),
-    desktopIconSize_(48),
-    desktopShowHidden_(false),
-    desktopHideItems_(false),
-    desktopSortOrder_(Qt::AscendingOrder),
-    desktopSortColumn_(Fm::FolderModel::ColumnFileMTime),
-    desktopSortFolderFirst_(true),
-    desktopSortHiddenLast_(false),
-    desktopNoTooltip_(false),
     alwaysShowTabs_(true),
     showTabClose_(true),
     switchToNewTab_(false),
@@ -136,8 +112,6 @@ Settings::Settings():
     templateTypeOnce_(false),
     templateRunApp_(false),
     folderViewCellMargins_(QSize(3, 3)),
-    desktopCellMargins_(QSize(3, 1)),
-    workAreaMargins_(QMargins(12, 12, 12, 12)),
     openWithDefaultFileManager_(false),
     allSticky_(false),
     searchNameCaseInsensitive_(false),
@@ -241,57 +215,6 @@ bool Settings::loadFile(QString filePath) {
     recentFilesNumber_ = std::clamp(settings.value(QStringLiteral("RecentFilesNumber"), 0).toInt(), 0, 50);
     settings.endGroup();
 
-    settings.beginGroup(QStringLiteral("Desktop"));
-    screenNames_ = settings.value(QStringLiteral("ScreenNames")).toStringList();
-    screenNames_.removeDuplicates();
-    wallpaperMode_ = wallpaperModeFromString(settings.value(QStringLiteral("WallpaperMode")).toString());
-    wallpaper_ = settings.value(QStringLiteral("Wallpaper")).toString();
-    wallpaperDialogSize_ = settings.value(QStringLiteral("WallpaperDialogSize"), QSize(700, 500)).toSize();
-    wallpaperDialogSplitterPos_ = settings.value(QStringLiteral("WallpaperDialogSplitterPos"), 200).toInt();
-    lastSlide_ = settings.value(QStringLiteral("LastSlide")).toString();
-    wallpaperDir_ = settings.value(QStringLiteral("WallpaperDirectory")).toString();
-    slideShowInterval_ = settings.value(QStringLiteral("SlideShowInterval"), 0).toInt();
-    wallpaperRandomize_ = settings.value(QStringLiteral("WallpaperRandomize")).toBool();
-    transformWallpaper_ = settings.value(QStringLiteral("TransformWallpaper")).toBool();
-    perScreenWallpaper_ = settings.value(QStringLiteral("PerScreenWallpaper")).toBool();
-    desktopBgColor_ = QColor::fromString(settings.value(QStringLiteral("BgColor"), QStringLiteral("#000000")).toString());
-    desktopFgColor_ = QColor::fromString(settings.value(QStringLiteral("FgColor"), QStringLiteral("#ffffff")).toString());
-    desktopShadowColor_ = QColor::fromString(settings.value(QStringLiteral("ShadowColor"), QStringLiteral("#000000")).toString());
-    if(settings.contains(QStringLiteral("Font"))) {
-        desktopFont_.fromString(settings.value(QStringLiteral("Font")).toString());
-    }
-    else {
-        desktopFont_ = QApplication::font();
-    }
-    desktopIconSize_ = settings.value(QStringLiteral("DesktopIconSize"), 48).toInt();
-    desktopShortcuts_ = settings.value(QStringLiteral("DesktopShortcuts")).toStringList();
-    desktopShowHidden_ = settings.value(QStringLiteral("ShowHidden"), false).toBool();
-
-    // X11
-    desktopHideItems_ = settings.value(QStringLiteral("HideItems"), false).toBool();
-    // Wayland
-    for(const auto& screenName : std::as_const(screenNames_)) {
-        desktopHideItemsOnScreens_.insert(screenName, settings.value(QStringLiteral("HideItems-%1").arg(screenName), false).toBool());
-    }
-
-    desktopSortOrder_ = sortOrderFromString(settings.value(QStringLiteral("SortOrder")).toString());
-    desktopSortColumn_ = sortColumnFromString(settings.value(QStringLiteral("SortColumn")).toString());
-    desktopSortFolderFirst_ = settings.value(QStringLiteral("SortFolderFirst"), true).toBool();
-    desktopSortHiddenLast_ = settings.value(QStringLiteral("SortHiddenLast"), false).toBool();
-    desktopNoTooltip_ = settings.value(QStringLiteral("NoItemTooltip"), false).toBool();
-
-    desktopCellMargins_ = (settings.value(QStringLiteral("DesktopCellMargins"), QSize(3, 1)).toSize()
-                           .expandedTo(QSize(0, 0))).boundedTo(QSize(48, 48));
-    auto l = settings.value(QStringLiteral("WorkAreaMargins")).toList();
-    if(l.size() >= 4) {
-        workAreaMargins_.setLeft(std::clamp(l.at(0).toInt(), 0, 200));
-        workAreaMargins_.setTop(std::clamp(l.at(1).toInt(), 0, 200));
-        workAreaMargins_.setRight(std::clamp(l.at(2).toInt(), 0, 200));
-        workAreaMargins_.setBottom(std::clamp(l.at(3).toInt(), 0, 200));
-    }
-
-    openWithDefaultFileManager_ = settings.value(QStringLiteral("OpenWithDefaultFileManager"), false).toBool();
-    allSticky_ = settings.value(QStringLiteral("AllSticky"), false).toBool();
     settings.endGroup();
 
     settings.beginGroup(QStringLiteral("Volume"));
@@ -414,46 +337,6 @@ bool Settings::saveFile(QString filePath) {
     settings.setValue(QStringLiteral("RecentFilesNumber"), recentFilesNumber_);
     settings.endGroup();
 
-    settings.beginGroup(QStringLiteral("Desktop"));
-    settings.setValue(QStringLiteral("ScreenNames"), screenNames_);
-    settings.setValue(QStringLiteral("WallpaperMode"), QString::fromUtf8(wallpaperModeToString(wallpaperMode_)));
-    settings.setValue(QStringLiteral("Wallpaper"), wallpaper_);
-    settings.setValue(QStringLiteral("WallpaperDialogSize"), wallpaperDialogSize_);
-    settings.setValue(QStringLiteral("WallpaperDialogSplitterPos"), wallpaperDialogSplitterPos_);
-    settings.setValue(QStringLiteral("LastSlide"), lastSlide_);
-    settings.setValue(QStringLiteral("WallpaperDirectory"), wallpaperDir_);
-    settings.setValue(QStringLiteral("SlideShowInterval"), slideShowInterval_);
-    settings.setValue(QStringLiteral("WallpaperRandomize"), wallpaperRandomize_);
-    settings.setValue(QStringLiteral("TransformWallpaper"), transformWallpaper_);
-    settings.setValue(QStringLiteral("PerScreenWallpaper"), perScreenWallpaper_);
-    settings.setValue(QStringLiteral("BgColor"), desktopBgColor_.name());
-    settings.setValue(QStringLiteral("FgColor"), desktopFgColor_.name());
-    settings.setValue(QStringLiteral("ShadowColor"), desktopShadowColor_.name());
-    settings.setValue(QStringLiteral("Font"), desktopFont_.toString());
-    settings.setValue(QStringLiteral("DesktopIconSize"), desktopIconSize_);
-    settings.setValue(QStringLiteral("DesktopShortcuts"), desktopShortcuts_);
-    settings.setValue(QStringLiteral("ShowHidden"), desktopShowHidden_);
-
-    // X11
-    settings.setValue(QStringLiteral("HideItems"), desktopHideItems_);
-    // Wayland
-    for(const auto& screenName : std::as_const(screenNames_)) {
-        settings.setValue(QStringLiteral("HideItems-%1").arg(screenName), desktopHideItemsOnScreens_.value(screenName, false));
-    }
-
-    settings.setValue(QStringLiteral("SortOrder"), QString::fromUtf8(sortOrderToString(desktopSortOrder_)));
-    settings.setValue(QStringLiteral("SortColumn"), QString::fromUtf8(sortColumnToString(desktopSortColumn_)));
-    settings.setValue(QStringLiteral("SortFolderFirst"), desktopSortFolderFirst_);
-    settings.setValue(QStringLiteral("SortHiddenLast"), desktopSortHiddenLast_);
-    settings.setValue(QStringLiteral("NoItemTooltip"), desktopNoTooltip_);
-    settings.setValue(QStringLiteral("DesktopCellMargins"), desktopCellMargins_);
-    QList<QVariant> l{workAreaMargins_.left(),
-                      workAreaMargins_.top(),
-                      workAreaMargins_.right(),
-                      workAreaMargins_.bottom()};
-    settings.setValue(QStringLiteral("WorkAreaMargins"), l);
-    settings.setValue(QStringLiteral("OpenWithDefaultFileManager"), openWithDefaultFileManager_);
-    settings.setValue(QStringLiteral("AllSticky"), allSticky_);
     settings.endGroup();
 
     settings.beginGroup(QStringLiteral("Volume"));
@@ -814,54 +697,6 @@ static Fm::FolderModel::ColumnId sortColumnFromString(const QString str) {
     return ret;
 }
 
-static const char* wallpaperModeToString(int value) {
-    const char* ret;
-    switch(value) {
-    case DesktopWindow::WallpaperNone:
-    default:
-        ret = "none";
-        break;
-    case DesktopWindow::WallpaperStretch:
-        ret = "stretch";
-        break;
-    case DesktopWindow::WallpaperFit:
-        ret = "fit";
-        break;
-    case DesktopWindow::WallpaperCenter:
-        ret = "center";
-        break;
-    case DesktopWindow::WallpaperTile:
-        ret = "tile";
-        break;
-    case DesktopWindow::WallpaperZoom:
-        ret = "zoom";
-        break;
-    }
-    return ret;
-}
-
-int Settings::wallpaperModeFromString(const QString str) {
-    int ret;
-    if(str == QLatin1String("stretch")) {
-        ret = DesktopWindow::WallpaperStretch;
-    }
-    else if(str == QLatin1String("fit")) {
-        ret = DesktopWindow::WallpaperFit;
-    }
-    else if(str == QLatin1String("center")) {
-        ret = DesktopWindow::WallpaperCenter;
-    }
-    else if(str == QLatin1String("tile")) {
-        ret = DesktopWindow::WallpaperTile;
-    }
-    else if(str == QLatin1String("zoom")) {
-        ret = DesktopWindow::WallpaperZoom;
-    }
-    else {
-        ret = DesktopWindow::WallpaperNone;
-    }
-    return ret;
-}
 
 static const char* sidePaneModeToString(Fm::SidePane::Mode value) {
     const char* ret;

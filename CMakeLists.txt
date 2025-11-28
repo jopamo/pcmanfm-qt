@@ -17,8 +17,6 @@ set(PCMANFM_QT_VERSION ${PCMANFM_QT_VERSION_MAJOR}.${PCMANFM_QT_VERSION_MINOR}.$
 set(LIBFMQT_MINIMUM_VERSION "2.3.0")
 set(LXQTBT_MINIMUM_VERSION "2.3.0")
 set(QT_MINIMUM_VERSION "6.6.0")
-set(SHELLQT_MINIMUM_VERSION "6.0.0")
-
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 find_package(Qt6DBus ${QT_MINIMUM_VERSION} REQUIRED)
@@ -26,7 +24,6 @@ find_package(Qt6LinguistTools ${QT_MINIMUM_VERSION} REQUIRED)
 find_package(Qt6Widgets ${QT_MINIMUM_VERSION} REQUIRED)
 find_package(fm-qt6 ${LIBFMQT_MINIMUM_VERSION} REQUIRED)
 find_package(lxqt2-build-tools ${LXQTBT_MINIMUM_VERSION} REQUIRED)
-find_package(LayerShellQt ${SHELLQT_MINIMUM_VERSION} REQUIRED)
 
 message(STATUS "Building ${PROJECT_NAME} with Qt ${Qt6Core_VERSION}")
 
@@ -76,5 +73,4 @@ install(
     DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/scalable/apps"
 )
 
-add_subdirectory(autostart)
 add_subdirectory(config)
