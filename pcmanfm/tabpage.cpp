@@ -421,7 +421,8 @@ void TabPage::onFolderFinishLoading() {
         Q_EMIT titleChanged();
     }
 
-    folder_->queryFilesystemInfo();  // FIXME: is this needed?
+    // query filesystem info so free space and total size can be shown and kept up to date
+    folder_->queryFilesystemInfo();
 
     // update status text
     QString& text = statusText_[StatusTextNormal];
