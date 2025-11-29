@@ -1,177 +1,172 @@
-/*
-
-	Copyright (C) 2014  Kuzma Shapran <kuzma.shapran@gmail.com>
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-*/
-
-
 #include "tabbar.h"
-#include <QPointer>
-#include <QMouseEvent>
+
 #include <QApplication>
 #include <QDrag>
 #include <QMimeData>
+#include <QMouseEvent>
+#include <QPointer>
 #include <algorithm>
 
 namespace PCManFM {
 
+namespace {
+constexpr auto tabMimeType = "application/pcmanfm-qt-tab";
+}
+
 const char* TabBar::tabDropped = "_pcmanfm_tab_dropped";
 
-TabBar::TabBar(QWidget *parent):
-    QTabBar(parent),
-    dragStarted_(false),
-    detachable_(true)
-{
-    setElideMode(Qt::ElideRight); // works with minimumTabSizeHint()
+TabBar::TabBar(QWidget* parent) : QTabBar(parent), dragStarted_(false), detachable_(true) {
+    // elide long tab titles on the right, in combination with minimumTabSizeHint()
+    setElideMode(Qt::ElideRight);
 }
 
-void TabBar::mousePressEvent(QMouseEvent *event) {
+void TabBar::mousePressEvent(QMouseEvent* event) {
     QTabBar::mousePressEvent(event);
-    if(detachable_) {
-        if(event->button() == Qt::LeftButton && tabAt(event->pos()) > -1) {
-            dragStartPosition_ = event->pos();
-        }
-        else {
-            dragStartPosition_ = QPoint();
-        }
-        dragStarted_ = false;
+
+    if (!detachable_) {
+        return;
     }
+
+    if (event->button() == Qt::LeftButton && tabAt(event->pos()) > -1) {
+        dragStartPosition_ = event->pos();
+    } else {
+        dragStartPosition_ = QPoint();
+    }
+
+    dragStarted_ = false;
 }
 
-void TabBar::mouseMoveEvent(QMouseEvent *event)
-{
-    if(!detachable_) {
+void TabBar::mouseMoveEvent(QMouseEvent* event) {
+    if (!detachable_) {
         QTabBar::mouseMoveEvent(event);
         return;
     }
 
-    if(!dragStarted_ && !dragStartPosition_.isNull()
-       && (event->pos() - dragStartPosition_).manhattanLength() >= QApplication::startDragDistance()) {
+    // see if the drag threshold is exceeded and mark that a drag has started
+    if (!dragStarted_ && !dragStartPosition_.isNull() &&
+        (event->pos() - dragStartPosition_).manhattanLength() >= QApplication::startDragDistance()) {
         dragStarted_ = true;
     }
 
-    if((event->buttons() & Qt::LeftButton)
-       && dragStarted_
-       && !window()->geometry().contains(event->globalPosition().toPoint())) {
-        if(currentIndex() == -1) {
+    if ((event->buttons() & Qt::LeftButton) && dragStarted_ &&
+        !window()->geometry().contains(event->globalPosition().toPoint())) {
+        if (currentIndex() == -1) {
             return;
         }
 
-        // NOTE: To be on the safe side (especially under Wayland), we detach or drop the tab
-        // only after finishing the DND; see MainWindow::dropEvent and the queued connection
-        // to TabBar::tabDetached in MainWindow.
+        // To be safe on Wayland and X11, the tab is only detached or dropped
+        // *after* the drag operation finishes
+        // See MainWindow::dropEvent and the queued connection to TabBar::tabDetached
 
         QPointer<QDrag> drag = new QDrag(this);
-        QMimeData *mimeData = new QMimeData;
-        mimeData->setData(QStringLiteral("application/pcmanfm-qt-tab"), QByteArray());
+        auto* mimeData = new QMimeData;
+        mimeData->setData(QString::fromLatin1(tabMimeType), QByteArray());
         drag->setMimeData(mimeData);
-        int N = count();
-        Qt::DropAction dragged = drag->exec(Qt::MoveAction);
-        if(dragged != Qt::MoveAction) {
-            // The drop was not accepted (by any PCManFM-Qt window).
-            // The tab will be detached if there is more than one tab.
-            if(N > 1) {
+
+        const int tabCountBefore = count();
+        const Qt::DropAction result = drag->exec(Qt::MoveAction);
+
+        if (result != Qt::MoveAction) {
+            // No PCManFM-Qt window accepted the drop
+            // Detach the tab if more than one tab is present, otherwise cancel cleanly
+            if (tabCountBefore > 1) {
                 Q_EMIT tabDetached();
-            }
-            else {
+            } else {
                 finishMouseMoveEvent();
             }
-        }
-        else {
-            // Since another app can also accept this drop, we check if the object property
-            // "_pcmanfm_tab_dropped" is set (by MainWindow::dropEvent) and detach the tab
-            // if it is not; otherwise, the tab will be dropped into one of our windows.
-            if(property(tabDropped).toBool()) {
-                setProperty(tabDropped, QVariant()); // reset the property
-            }
-            else {
-                if(N > 1)
+        } else {
+            // Another window may have accepted this drop
+            // MainWindow::dropEvent sets the tabDropped property when we drop into ourselves
+            const bool droppedIntoTabBar = property(tabDropped).toBool();
+            if (droppedIntoTabBar) {
+                setProperty(tabDropped, QVariant());
+            } else {
+                if (tabCountBefore > 1) {
                     Q_EMIT tabDetached();
-                else
+                } else {
                     finishMouseMoveEvent();
+                }
             }
         }
+
         event->accept();
-        drag->deleteLater();
-    }
-    else {
+        if (drag) {
+            drag->deleteLater();
+        }
+    } else {
         QTabBar::mouseMoveEvent(event);
     }
 }
 
 void TabBar::finishMouseMoveEvent() {
+    // Synthesize a neutral mouse move to reset internal drag state in QTabBar
     QMouseEvent finishingEvent(QEvent::MouseMove, QPoint(), QCursor::pos(), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     mouseMoveEvent(&finishingEvent);
 }
 
 void TabBar::releaseMouse() {
-    QMouseEvent releasingEvent(QEvent::MouseButtonRelease, QPoint(), QCursor::pos(), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    // Synthesize a release event to clean up pressed state when we cancel a drag
+    QMouseEvent releasingEvent(QEvent::MouseButtonRelease, QPoint(), QCursor::pos(), Qt::LeftButton, Qt::NoButton,
+                               Qt::NoModifier);
     mouseReleaseEvent(&releasingEvent);
 }
 
-void TabBar::mouseReleaseEvent(QMouseEvent *event) {
-    if(detachable_) { // reset drag info
+void TabBar::mouseReleaseEvent(QMouseEvent* event) {
+    if (detachable_) {
+        // reset drag tracking
         dragStarted_ = false;
         dragStartPosition_ = QPoint();
     }
 
+    // middle-click closes the tab under the cursor
     if (event->button() == Qt::MiddleButton) {
-        int index = tabAt(event->pos());
+        const int index = tabAt(event->pos());
         if (index != -1) {
             Q_EMIT tabCloseRequested(index);
         }
     }
+
     QTabBar::mouseReleaseEvent(event);
 }
 
-// Let the main window receive dragged tabs!
-void TabBar::dragEnterEvent(QDragEnterEvent *event) {
-    if(detachable_ && event->mimeData()->hasFormat(QStringLiteral("application/pcmanfm-qt-tab"))) {
+// Let the main window receive dragged tabs
+void TabBar::dragEnterEvent(QDragEnterEvent* event) {
+    if (detachable_ && event->mimeData()->hasFormat(QString::fromLatin1(tabMimeType))) {
+        // ignore here so the main window can handle the drop
         event->ignore();
     }
 }
 
-// Limit the size of large tabs to 2/3 of the width of the tabbar.
+// Limit the size of large tabs to 2/3 of the tabbar width or height
 QSize TabBar::tabSizeHint(int index) const {
+    const QSize base = QTabBar::tabSizeHint(index);
+
     switch (shape()) {
-    case QTabBar::RoundedWest:
-    case QTabBar::TriangularWest:
-    case QTabBar::RoundedEast:
-    case QTabBar::TriangularEast:
-        return QSize(QTabBar::tabSizeHint(index).width(),
-                     std::min(2 * height() / 3, QTabBar::tabSizeHint(index).height()));
-    default:
-        return QSize(std::min(2 * width() / 3, QTabBar::tabSizeHint(index).width()),
-                     QTabBar::tabSizeHint(index).height());
+        case QTabBar::RoundedWest:
+        case QTabBar::TriangularWest:
+        case QTabBar::RoundedEast:
+        case QTabBar::TriangularEast: {
+            const int maxHeight = 2 * height() / 3;
+            return QSize(base.width(), std::min(maxHeight, base.height()));
+        }
+        default: {
+            const int maxWidth = 2 * width() / 3;
+            return QSize(std::min(maxWidth, base.width()), base.height());
+        }
     }
 }
 
-// Set minimumTabSizeHint to tabSizeHint to keep tabs from shrinking with eliding.
-QSize TabBar::minimumTabSizeHint(int index) const {
-    return tabSizeHint(index);
-}
+// Keep minimum tab size equal to the hint to avoid shrinking under eliding
+QSize TabBar::minimumTabSizeHint(int index) const { return tabSizeHint(index); }
 
 void TabBar::tabInserted(int index) {
-    // WARNING: Qt6 has a bug that does not show the tabbar in our window on inserting the first
-    // tab unless the tab layout is updated after its insertion. Usually, the tab text is reset
-    // in MainWindow and the layout is updated, but it is also possible that the text is never
-    // touched after the insertion. Therefore, we need the following workaround.
-    if(!autoHide() && index == 0 && count() == 1) {
+    QTabBar::tabInserted(index);
+
+    // Qt6 sometimes fails to show the tab bar when the first tab is inserted
+    // Updating the geometry after inserting the first non-auto-hidden tab works around this
+    if (!autoHide() && index == 0 && count() == 1) {
         updateGeometry();
     }
 }
 
-}
+}  // namespace PCManFM
