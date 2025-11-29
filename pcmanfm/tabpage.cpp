@@ -494,24 +494,34 @@ void TabPage::onFolderFsInfo() {
 }
 
 QString TabPage::formatStatusText() {
-    if (proxyModel_ && folder_) {
-        // FIXME: this is very inefficient
-        auto files = folder_->files();
-        int total_files = files.size();
-        int shown_files = proxyModel_->rowCount();
-        int hidden_files = total_files - shown_files;
-        QString text = tr("%n item(s)", "", shown_files);
-        if (hidden_files > 0) {
-            text += tr(" (%n hidden)", "", hidden_files);
-        }
-        auto fi = folder_->info();
-        if (fi && fi->isSymlink()) {
-            text +=
-                QStringLiteral(" (%1)").arg(tr("Link to") + QChar(QChar::Space) + QString::fromStdString(fi->target()));
-        }
-        return text;
+    if (!proxyModel_ || !folder_) {
+        return QString();
     }
-    return QString();
+
+    // Prefer model row counts over walking the full file list to keep this lightweight
+    int shown_files = proxyModel_->rowCount();
+
+    int total_files = 0;
+    if (folderModel_) {
+        total_files = folderModel_->rowCount();
+    } else {
+        auto files = folder_->files();
+        total_files = files.size();
+    }
+
+    int hidden_files = qMax(0, total_files - shown_files);
+
+    QString text = tr("%n item(s)", "", shown_files);
+    if (hidden_files > 0) {
+        text += tr(" (%n hidden)", "", hidden_files);
+    }
+
+    auto fi = folder_->info();
+    if (fi && fi->isSymlink()) {
+        text += QStringLiteral(" (%1)").arg(tr("Link to") + QChar(QChar::Space) + QString::fromStdString(fi->target()));
+    }
+
+    return text;
 }
 
 void TabPage::onFolderRemoved() {
