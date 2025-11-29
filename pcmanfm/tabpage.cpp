@@ -630,7 +630,7 @@ void TabPage::chdir(Fm::FilePath newPath, bool addHistory) {
     connect(folder_.get(), &Fm::Folder::startLoading, this, &TabPage::onFolderStartLoading);
     connect(folder_.get(), &Fm::Folder::finishLoading, this, &TabPage::onFolderFinishLoading);
 
-    // FIXME: Fm::Folder::error() is a bad design and might be removed in the future
+    // connect folder error notifications to TabPage so mount and access errors can be handled centrally
     connect(folder_.get(), &Fm::Folder::error, this, &TabPage::onFolderError);
     connect(folder_.get(), &Fm::Folder::fileSystemChanged, this, &TabPage::onFolderFsInfo);
     /* destroy the page when the folder is unmounted or deleted */
