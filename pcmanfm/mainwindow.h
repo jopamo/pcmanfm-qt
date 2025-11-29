@@ -27,6 +27,8 @@
 #include <libfm-qt6/pathedit.h>
 #include <libfm-qt6/utilities.h>
 
+#include <QFrame>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListView>
 #include <QMainWindow>

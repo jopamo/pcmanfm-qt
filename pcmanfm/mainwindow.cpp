@@ -9,8 +9,76 @@ namespace PCManFM {
 
 QPointer<MainWindow> MainWindow::lastActive_;
 
-MainWindow::MainWindow(Fm::FilePath path) {
-    // Constructor implementation
+MainWindow::MainWindow(Fm::FilePath path)
+    : pathEntry_(nullptr),
+      pathBar_(nullptr),
+      fsInfoLabel_(nullptr),
+      fileLauncher_(this),
+      rightClickIndex_(-1),
+      updatingViewMenu_(false),
+      menuSep_(nullptr),
+      menuSpacer_(nullptr),
+      activeViewFrame_(nullptr),
+      splitView_(false),
+      splitTabsNum_(0) {
+    // Setup UI from the generated header
+    ui.setupUi(this);
+
+    // Create filesystem info label and add to status bar
+    fsInfoLabel_ = new QLabel(this);
+    fsInfoLabel_->setFrameShape(QFrame::NoFrame);
+    fsInfoLabel_->setContentsMargins(4, 0, 4, 0);
+    fsInfoLabel_->setVisible(false);
+    ui.statusbar->addPermanentWidget(fsInfoLabel_);
+
+    // Initialize the window
+    auto* app = qobject_cast<Application*>(qApp);
+    if (app) {
+        Settings& settings = app->settings();
+
+        // Initialize side pane
+        ui.sidePane->setVisible(settings.isSidePaneVisible());
+        ui.actionSidePane->setChecked(settings.isSidePaneVisible());
+        ui.sidePane->setIconSize(QSize(settings.sidePaneIconSize(), settings.sidePaneIconSize()));
+        ui.sidePane->setMode(settings.sidePaneMode());
+        ui.sidePane->restoreHiddenPlaces(settings.getHiddenPlaces());
+
+        // Connect side pane signals
+        connect(ui.sidePane, &Fm::SidePane::chdirRequested, this, &MainWindow::onSidePaneChdirRequested);
+        connect(ui.sidePane, &Fm::SidePane::openFolderInNewWindowRequested, this,
+                &MainWindow::onSidePaneOpenFolderInNewWindowRequested);
+        connect(ui.sidePane, &Fm::SidePane::openFolderInNewTabRequested, this,
+                &MainWindow::onSidePaneOpenFolderInNewTabRequested);
+        connect(ui.sidePane, &Fm::SidePane::openFolderInTerminalRequested, this,
+                &MainWindow::onSidePaneOpenFolderInTerminalRequested);
+        connect(ui.sidePane, &Fm::SidePane::createNewFolderRequested, this,
+                &MainWindow::onSidePaneCreateNewFolderRequested);
+        connect(ui.sidePane, &Fm::SidePane::modeChanged, this, &MainWindow::onSidePaneModeChanged);
+        connect(ui.sidePane, &Fm::SidePane::hiddenPlaceSet, this, &MainWindow::onSettingHiddenPlace);
+
+        // Initialize splitter
+        connect(ui.splitter, &QSplitter::splitterMoved, this, &MainWindow::onSplitterMoved);
+        ui.splitter->setStretchFactor(1, 1);  // only the right pane can be stretched
+        ui.splitter->setSizes({settings.splitterPos(), 1});
+
+        // Initialize view action icons
+        ui.actionIconView->setIcon(QIcon::fromTheme(QLatin1String("view-list-icons"),
+                                                    style()->standardIcon(QStyle::SP_FileDialogContentsView)));
+        ui.actionThumbnailView->setIcon(QIcon::fromTheme(QLatin1String("view-list-icons"),
+                                                         style()->standardIcon(QStyle::SP_FileDialogContentsView)));
+        ui.actionCompactView->setIcon(QIcon::fromTheme(QLatin1String("view-list-details"),
+                                                       style()->standardIcon(QStyle::SP_FileDialogDetailedView)));
+        ui.actionDetailedList->setIcon(QIcon::fromTheme(QLatin1String("view-list-details"),
+                                                        style()->standardIcon(QStyle::SP_FileDialogDetailedView)));
+
+        updateFromSettings(settings);
+    }
+
+    // Add initial view frame
+    addViewFrame(path);
+
+    // Set window title
+    setWindowTitle(QStringLiteral("PCManFM-Qt"));
 }
 
 MainWindow::~MainWindow() {
@@ -18,7 +86,28 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::updateFromSettings(Settings& settings) {
-    // Settings update implementation
+    // Apply settings to the window
+    splitView_ = settings.splitView();
+
+    // Update side pane visibility
+    if (ui.sidePane) {
+        ui.sidePane->setVisible(settings.isSidePaneVisible());
+    }
+
+    // Update side pane mode
+    if (ui.sidePane) {
+        ui.sidePane->setMode(settings.sidePaneMode());
+    }
+
+    // Update splitter position
+    if (ui.splitter) {
+        ui.splitter->setSizes({settings.splitterPos(), 1});
+    }
+
+    // Update menu bar visibility
+    ui.menubar->setVisible(settings.showMenuBar());
+
+    // Toolbar visibility is not configurable - always visible
 }
 
 void MainWindow::setRTLIcons(bool isRTL) {
@@ -30,7 +119,13 @@ void MainWindow::onTabPageTitleChanged() {
 }
 
 void MainWindow::onTabPageStatusChanged(int type, QString statusText) {
-    // Tab page status changed implementation
+    if (type == TabPage::StatusTextFSInfo) {
+        // Update filesystem info label
+        if (fsInfoLabel_) {
+            fsInfoLabel_->setText(statusText);
+            fsInfoLabel_->setVisible(!statusText.isEmpty());
+        }
+    }
 }
 
 void MainWindow::onTabPageSortFilterChanged() {

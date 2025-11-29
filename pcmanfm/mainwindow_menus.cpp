@@ -130,8 +130,6 @@ void MainWindow::updateStatusBarForCurrentPage() {
     TabPage* tabPage = currentPage();
     if (!tabPage) {
         ui.statusbar->clearMessage();
-        fsInfoLabel_->clear();
-        fsInfoLabel_->setVisible(false);
         return;
     }
 
@@ -140,10 +138,6 @@ void MainWindow::updateStatusBarForCurrentPage() {
         text = tabPage->statusText(TabPage::StatusTextNormal);
     }
     ui.statusbar->showMessage(text);
-
-    text = tabPage->statusText(TabPage::StatusTextFSInfo);
-    fsInfoLabel_->setText(text);
-    fsInfoLabel_->setVisible(!text.isEmpty());
 }
 
 void MainWindow::updateViewMenuForCurrentPage() {
@@ -287,7 +281,6 @@ void MainWindow::updateUIForCurrentPage(bool setFocus) {
         }
 
         ui.statusbar->showMessage(tabPage->statusText());
-        fsInfoLabel_->setText(tabPage->statusText(TabPage::StatusTextFSInfo));
         if (setFocus && tabPage->folderView() && tabPage->folderView()->childView()) {
             tabPage->folderView()->childView()->setFocus();
         }
