@@ -1,136 +1,121 @@
-/*
-
-    Copyright (C) 2013  Hong Jen Yee (PCMan) <pcman.tw@gmail.com>
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-*/
-
-
 #include "view.h"
+
 #include <libfm-qt6/filemenu.h>
 #include <libfm-qt6/foldermenu.h>
-#include "application.h"
-#include "settings.h"
-#include "application.h"
-#include "mainwindow.h"
-#include "launcher.h"
+
 #include <QAction>
+#include <QMessageBox>
+
+#include "application.h"
+#include "launcher.h"
+#include "mainwindow.h"
+#include "settings.h"
 
 namespace PCManFM {
 
-View::View(Fm::FolderView::ViewMode _mode, QWidget* parent):
-    Fm::FolderView(_mode, parent) {
-
-    Settings& settings = static_cast<Application*>(qApp)->settings();
+View::View(Fm::FolderView::ViewMode mode, QWidget* parent) : Fm::FolderView(mode, parent) {
+    auto& settings = static_cast<Application*>(qApp)->settings();
     updateFromSettings(settings);
 }
 
 View::~View() = default;
 
 void View::onFileClicked(int type, const std::shared_ptr<const Fm::FileInfo>& fileInfo) {
-    if(type == MiddleClick) {
-        if(fileInfo && fileInfo->isDir()) {
-            // fileInfo->path() shouldn't be used directly because
-            // it won't work in places like computer:/// or network:///
+    if (type == MiddleClick) {
+        if (fileInfo && fileInfo->isDir()) {
+            // fileInfo->path() should not be used directly here
+            // it can misbehave for locations like computer:/// or network:///
             Fm::FileInfoList files;
             files.emplace_back(fileInfo);
             launchFiles(std::move(files), true);
         }
+        return;
     }
-    else {
-        if(type == ActivatedClick) {
-            if(fileLauncher()) { // launch all selected files
-                auto files = selectedFiles();
-                if(!files.empty()) {
-                    if(files.size() > 20) {
-                        QMessageBox::StandardButton r = QMessageBox::question(window(),
-                                                        tr("Many files"),
-                                                        tr("Do you want to open these %1 files?", nullptr, files.size()).arg(files.size()),
-                                                        QMessageBox::Yes | QMessageBox::No,
-                                                        QMessageBox::No);
-                        if(r == QMessageBox::No) {
-                            return;
-                        }
-                    }
-                    launchFiles(std::move(files));
-                }
+
+    if (type == ActivatedClick) {
+        if (!fileLauncher()) {
+            return;
+        }
+
+        auto files = selectedFiles();
+        if (files.empty()) {
+            return;
+        }
+
+        if (files.size() > 20) {
+            auto reply = QMessageBox::question(
+                window(), tr("Many files"),
+                tr("Do you want to open these %1 files?", nullptr, files.size()).arg(files.size()),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+            if (reply == QMessageBox::No) {
+                return;
             }
         }
-        else {
-            Fm::FolderView::onFileClicked(type, fileInfo);
-        }
+
+        launchFiles(std::move(files));
+        return;
     }
+
+    Fm::FolderView::onFileClicked(type, fileInfo);
 }
 
 void View::onNewWindow() {
-    Fm::FileMenu* menu = static_cast<Fm::FileMenu*>(sender()->parent());
+    auto* menu = static_cast<Fm::FileMenu*>(sender()->parent());
     auto files = menu->files();
-    if(files.size() == 1 && !files.front()->isDir()) {
+
+    if (files.size() == 1 && !files.front()->isDir()) {
         openFolderAndSelectFile(files.front());
-    }
-    else {
-        Application* app = static_cast<Application*>(qApp);
+    } else {
+        auto* app = static_cast<Application*>(qApp);
         app->openFolders(std::move(files));
     }
 }
 
 void View::onNewTab() {
-    Fm::FileMenu* menu = static_cast<Fm::FileMenu*>(sender()->parent());
+    auto* menu = static_cast<Fm::FileMenu*>(sender()->parent());
     auto files = menu->files();
-    if(files.size() == 1 && !files.front()->isDir()) {
+
+    if (files.size() == 1 && !files.front()->isDir()) {
         openFolderAndSelectFile(files.front(), true);
-    }
-    else {
+    } else {
         launchFiles(std::move(files), true);
     }
 }
 
 void View::onOpenInTerminal() {
-    Application* app = static_cast<Application*>(qApp);
-    Fm::FileMenu* menu = static_cast<Fm::FileMenu*>(sender()->parent());
+    auto* app = static_cast<Application*>(qApp);
+    auto* menu = static_cast<Fm::FileMenu*>(sender()->parent());
     auto files = menu->files();
-    for(auto& file: files) {
+
+    for (auto& file : files) {
         app->openFolderInTerminal(file->path());
     }
 }
 
 void View::onSearch() {
-
+    // reserved for integrating a search action from the context menu
 }
 
 void View::prepareFileMenu(Fm::FileMenu* menu) {
-    Application* app = static_cast<Application*>(qApp);
+    auto* app = static_cast<Application*>(qApp);
     menu->setConfirmDelete(app->settings().confirmDelete());
     menu->setConfirmTrash(app->settings().confirmTrash());
     menu->setUseTrash(app->settings().useTrash());
 
-    // add some more menu items for dirs
-    bool all_native = true;
-    bool all_directory = true;
+    bool allNative = true;
+    bool allDirectory = true;
+
     auto files = menu->files();
-    for(auto& fi: files) {
-        if(!fi->isDir()) {
-            all_directory = false;
-        }
-        else if(fi->isDir() && !fi->isNative()) {
-            all_native = false;
+    for (auto& fi : files) {
+        if (!fi->isDir()) {
+            allDirectory = false;
+        } else if (!fi->isNative()) {
+            allNative = false;
         }
     }
 
-    if(all_directory) {
-        QAction* action = new QAction(QIcon::fromTheme(QStringLiteral("tab-new")), tr("Open in New T&ab"), menu);
+    if (allDirectory) {
+        auto* action = new QAction(QIcon::fromTheme(QStringLiteral("tab-new")), tr("Open in New T&ab"), menu);
         connect(action, &QAction::triggered, this, &View::onNewTab);
         menu->insertAction(menu->separator1(), action);
 
@@ -138,26 +123,23 @@ void View::prepareFileMenu(Fm::FileMenu* menu) {
         connect(action, &QAction::triggered, this, &View::onNewWindow);
         menu->insertAction(menu->separator1(), action);
 
-        // TODO: add search
-        // action = menu->addAction(_("Search"));
+        // search actions can be added here when integrated
 
-        if(all_native) {
+        if (allNative) {
             action = new QAction(QIcon::fromTheme(QStringLiteral("utilities-terminal")), tr("Open in Termina&l"), menu);
             connect(action, &QAction::triggered, this, &View::onOpenInTerminal);
             menu->insertAction(menu->separator1(), action);
         }
-    }
-    else {
-        if(menu->pasteAction()) { // nullptr for trash
+    } else {
+        if (menu->pasteAction()) {
             menu->pasteAction()->setVisible(false);
         }
-        if(menu->createAction()) {
+        if (menu->createAction()) {
             menu->createAction()->setVisible(false);
         }
 
-        if(folder() && folder()->path().hasUriScheme("search")
-           && files.size() == 1 && !files.front()->isDir()) {
-            QAction* action = new QAction(QIcon::fromTheme(QStringLiteral("tab-new")), tr("Show in New T&ab"), menu);
+        if (folder() && folder()->path().hasUriScheme("search") && files.size() == 1 && !files.front()->isDir()) {
+            auto* action = new QAction(QIcon::fromTheme(QStringLiteral("tab-new")), tr("Show in New T&ab"), menu);
             connect(action, &QAction::triggered, this, &View::onNewTab);
             menu->insertAction(menu->separator1(), action);
 
@@ -170,10 +152,11 @@ void View::prepareFileMenu(Fm::FileMenu* menu) {
 
 void View::prepareFolderMenu(Fm::FolderMenu* menu) {
     auto folder = folderInfo();
-    if(folder && folder->isNative()) {
-        QAction *action = new QAction(QIcon::fromTheme(QStringLiteral("utilities-terminal")), tr("Open in Termina&l"), menu);
+    if (folder && folder->isNative()) {
+        auto* action =
+            new QAction(QIcon::fromTheme(QStringLiteral("utilities-terminal")), tr("Open in Termina&l"), menu);
         connect(action, &QAction::triggered, this, [folder] {
-            Application* app = static_cast<Application*>(qApp);
+            auto* app = static_cast<Application*>(qApp);
             app->openFolderInTerminal(folder->path());
         });
         menu->insertAction(menu->createAction(), action);
@@ -182,7 +165,6 @@ void View::prepareFolderMenu(Fm::FolderMenu* menu) {
 }
 
 void View::updateFromSettings(Settings& settings) {
-
     setIconSize(Fm::FolderView::IconMode, QSize(settings.bigIconSize(), settings.bigIconSize()));
     setIconSize(Fm::FolderView::CompactMode, QSize(settings.smallIconSize(), settings.smallIconSize()));
     setIconSize(Fm::FolderView::ThumbnailMode, QSize(settings.thumbnailIconSize(), settings.thumbnailIconSize()));
@@ -191,60 +173,65 @@ void View::updateFromSettings(Settings& settings) {
     setMargins(settings.folderViewCellMargins());
 
     setAutoSelectionDelay(settings.singleClick() ? settings.autoSelectionDelay() : 0);
-
     setCtrlRightClick(settings.ctrlRightClick());
-
     setScrollPerPixel(settings.scrollPerPixel());
 
-    Fm::ProxyFolderModel* proxyModel = model();
-    if(proxyModel) {
+    auto* proxyModel = model();
+    if (proxyModel) {
         proxyModel->setShowThumbnails(settings.showThumbnails());
         proxyModel->setBackupAsHidden(settings.backupAsHidden());
     }
 }
 
 void View::launchFiles(Fm::FileInfoList files, bool inNewTabs) {
-    if(fileLauncher()) {
-        if(auto launcher = dynamic_cast<Launcher*>(fileLauncher())) {
-            // this happens on desktop
-            if(!launcher->hasMainWindow()) {
-                if(!inNewTabs && launcher->openWithDefaultFileManager()) {
-                    launcher->launchFiles(nullptr, std::move(files));
-                    return;
-                }
-                if(inNewTabs || static_cast<Application*>(qApp)->settings().singleWindowMode()) {
-                    MainWindow* window = MainWindow::lastActive();
-                    // if there is no last active window, find the last created window
-                    if(window == nullptr) {
-                        QWidgetList windows = qApp->topLevelWidgets();
-                        for(int i = 0; i < windows.size(); ++i) {
-                            auto win = windows.at(windows.size() - 1 - i);
-                            if(win->inherits("PCManFM::MainWindow")) {
-                                window = static_cast<MainWindow*>(win);
-                                break;
-                            }
+    if (!fileLauncher()) {
+        return;
+    }
+
+    if (auto launcher = dynamic_cast<Launcher*>(fileLauncher())) {
+        // this path is used for the desktop and similar cases
+        if (!launcher->hasMainWindow()) {
+            if (!inNewTabs && launcher->openWithDefaultFileManager()) {
+                launcher->launchFiles(nullptr, std::move(files));
+                return;
+            }
+
+            auto& settings = static_cast<Application*>(qApp)->settings();
+            if (inNewTabs || settings.singleWindowMode()) {
+                MainWindow* window = MainWindow::lastActive();
+
+                if (!window) {
+                    const QWidgetList windows = qApp->topLevelWidgets();
+                    for (int i = windows.size() - 1; i >= 0; --i) {
+                        auto* win = windows.at(i);
+                        if (win->inherits("PCManFM::MainWindow")) {
+                            window = static_cast<MainWindow*>(win);
+                            break;
                         }
                     }
-                    auto tempLauncher = Launcher(window);
-                    tempLauncher.openInNewTab();
-                    tempLauncher.launchFiles(nullptr, std::move(files));
-                    return;
                 }
-            }
-            if(inNewTabs) {
-                launcher->openInNewTab();
+
+                Launcher tempLauncher(window);
+                tempLauncher.openInNewTab();
+                tempLauncher.launchFiles(nullptr, std::move(files));
+                return;
             }
         }
-        fileLauncher()->launchFiles(nullptr, std::move(files));
+
+        if (inNewTabs) {
+            launcher->openInNewTab();
+        }
     }
+
+    fileLauncher()->launchFiles(nullptr, std::move(files));
 }
 
 void View::openFolderAndSelectFile(const std::shared_ptr<const Fm::FileInfo>& fileInfo, bool inNewTab) {
-    if(auto win = qobject_cast<MainWindow*>(window())) {
+    if (auto* win = qobject_cast<MainWindow*>(window())) {
         Fm::FilePathList paths;
         paths.emplace_back(fileInfo->path());
         win->openFolderAndSelectFiles(std::move(paths), inNewTab);
     }
 }
 
-} // namespace PCManFM
+}  // namespace PCManFM
