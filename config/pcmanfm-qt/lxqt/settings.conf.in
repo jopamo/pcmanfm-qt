@@ -1,6 +1,6 @@
 [System]
 IconThemeName=elementary
-FallbackIconThemeName=breeze
+FallbackIconThemeName=Papirus-Dark
 SuCommand=lxsudo dbus-run-session -- %s
 Archiver=lxqt-archiver
 SIUnit=false

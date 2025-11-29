@@ -186,7 +186,7 @@ bool Settings::loadFile(QString filePath) {
     if(fallbackIconThemeName_.isEmpty()) {
         // FIXME: we should choose one from installed icon themes or get
         // the value from XSETTINGS instead of hard code a fallback value.
-        fallbackIconThemeName_ = QLatin1String("oxygen"); // fallback icon theme name
+        fallbackIconThemeName_ = QLatin1String("Papirus-Dark"); // fallback icon theme name
     }
     suCommand_ = settings.value(QStringLiteral("SuCommand"), QStringLiteral("lxqt-sudo %s")).toString();
     setTerminal(settings.value(QStringLiteral("Terminal"), QStringLiteral("xterm")).toString());
