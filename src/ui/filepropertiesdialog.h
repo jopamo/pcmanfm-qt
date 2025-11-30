@@ -14,6 +14,7 @@ class QTabWidget;
 class QLabel;
 class QLineEdit;
 class QPushButton;
+class QCheckBox;
 
 class FilePropertiesDialog : public QDialog {
     Q_OBJECT
@@ -42,4 +43,16 @@ class FilePropertiesDialog : public QDialog {
     QLabel* m_modifiedLabel;
     QPushButton* m_applyButton;
     QPushButton* m_cancelButton;
+    QLineEdit* m_ownerEdit;
+    QLineEdit* m_groupEdit;
+    QCheckBox* m_ownerRead;
+    QCheckBox* m_ownerWrite;
+    QCheckBox* m_ownerExec;
+    QCheckBox* m_groupRead;
+    QCheckBox* m_groupWrite;
+    QCheckBox* m_groupExec;
+    QCheckBox* m_otherRead;
+    QCheckBox* m_otherWrite;
+    QCheckBox* m_otherExec;
+    QCheckBox* m_recursiveCheck;
 };
