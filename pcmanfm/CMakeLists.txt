@@ -30,6 +30,8 @@ set(pcmanfm_SRCS
     ../src/backends/qt/qt_fileinfo.cpp
     ../src/backends/qt/qt_foldermodel.cpp
     ../src/backends/gio/gio_trashbackend.cpp
+    ../src/backends/gio/gio_volumebackend.cpp
+    ../src/backends/gio/gio_remotebackend.cpp
     ../src/ui/filepropertiesdialog.cpp
     ../src/core/ifoldermodel.h
 )
