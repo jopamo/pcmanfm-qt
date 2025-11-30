@@ -1,4 +1,7 @@
-/* pcmanfm/mainwindow_viewframe.cpp */
+/*
+ * Main window view frame implementation
+ * pcmanfm/mainwindow_viewframe.cpp
+ */
 
 #include <QVBoxLayout>
 
