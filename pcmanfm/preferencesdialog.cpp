@@ -1,3 +1,8 @@
+/*
+ * Preferences dialog implementation for PCManFM-Qt
+ * pcmanfm/preferencesdialog.cpp
+ */
+
 #include "preferencesdialog.h"
 
 #include <libfm-qt6/core/archiver.h>
@@ -20,6 +25,43 @@
 #include "settings.h"
 
 namespace PCManFM {
+
+namespace {
+
+// Helper to access Application settings concisely
+Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+
+// Replaces the GLib GKeyFile implementation with native Qt QSettings
+void findIconThemesInDir(QHash<QString, QString>& iconThemes, const QString& dirName) {
+    QDir dir(dirName);
+    const QStringList subDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::Readable);
+
+    for (const QString& subDir : subDirs) {
+        // skip hidden themes like ".something"
+        if (subDir.startsWith(QLatin1Char('.'))) {
+            continue;
+        }
+
+        const QString indexFilePath = dir.filePath(subDir + QStringLiteral("/index.theme"));
+
+        // QSettings::IniFormat handles standard .theme files perfectly
+        QSettings themeFile(indexFilePath, QSettings::IniFormat);
+
+        // Icon themes must have an [Icon Theme] group with a "Directories" key
+        // to distinguish them from cursor themes or other metadata.
+        themeFile.beginGroup(QStringLiteral("Icon Theme"));
+        if (themeFile.contains(QStringLiteral("Directories"))) {
+            // QSettings automatically handles locale-based keys (e.g., Name[fr])
+            QString dispName = themeFile.value(QStringLiteral("Name")).toString();
+            if (!dispName.isEmpty()) {
+                iconThemes.insert(subDir, dispName);
+            }
+        }
+        themeFile.endGroup();
+    }
+}
+
+}  // namespace
 
 PreferencesDialog::PreferencesDialog(const QString& activePage, QWidget* parent) : QDialog(parent), warningCounter_(0) {
     ui.setupUi(this);
@@ -51,47 +93,18 @@ PreferencesDialog::PreferencesDialog(const QString& activePage, QWidget* parent)
 
 PreferencesDialog::~PreferencesDialog() = default;
 
-static void findIconThemesInDir(QHash<QString, QString>& iconThemes, const QString& dirName) {
-    QDir dir(dirName);
-    const QStringList subDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::Readable);
-
-    GKeyFile* kf = g_key_file_new();
-
-    for (const QString& subDir : subDirs) {
-        // skip hidden themes like ".something"
-        if (subDir.startsWith(QLatin1Char('.'))) {
-            continue;
-        }
-
-        const QString indexFile = dirName + QLatin1Char('/') + subDir + QStringLiteral("/index.theme");
-
-        if (g_key_file_load_from_file(kf, indexFile.toLocal8Bit().constData(), GKeyFileFlags(0), nullptr)) {
-            // icon themes that lack the Directories key are likely cursor or non icon themes
-            if (g_key_file_has_key(kf, "Icon Theme", "Directories", nullptr)) {
-                char* dispName = g_key_file_get_locale_string(kf, "Icon Theme", "Name", nullptr, nullptr);
-                if (dispName) {
-                    iconThemes.insert(subDir, QString::fromUtf8(dispName));
-                    g_free(dispName);
-                }
-            }
-        }
-    }
-
-    g_key_file_free(kf);
-}
-
 void PreferencesDialog::initIconThemes(Settings& settings) {
     // use the fallback icon theme combo only if auto detection failed
     if (settings.useFallbackIconTheme()) {
         QHash<QString, QString> iconThemes;
 
-        // user themes in ~/.icons
-        findIconThemesInDir(iconThemes, QString::fromUtf8(g_get_home_dir()) + QStringLiteral("/.icons"));
+        // user themes in ~/.icons and ~/.local/share/icons
+        findIconThemesInDir(iconThemes, QDir::homePath() + QStringLiteral("/.icons"));
 
-        // themes in system data dirs
-        const char* const* dataDirs = g_get_system_data_dirs();
-        for (const char* const* dataDir = dataDirs; *dataDir; ++dataDir) {
-            findIconThemesInDir(iconThemes, QString::fromUtf8(*dataDir) + QStringLiteral("/icons"));
+        // Qt equivalent of iterating g_get_system_data_dirs + /icons
+        const auto dataDirs = QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation);
+        for (const auto& path : dataDirs) {
+            findIconThemesInDir(iconThemes, path + QStringLiteral("/icons"));
         }
 
         // hicolor is a fallback and not useful as a user selectable theme here
@@ -104,16 +117,10 @@ void PreferencesDialog::initIconThemes(Settings& settings) {
         ui.iconTheme->model()->sort(0);
 
         // select current fallback theme if present
-        const int n = ui.iconTheme->count();
-        int index = 0;
-        for (int i = 0; i < n; ++i) {
-            const QVariant itemData = ui.iconTheme->itemData(i);
-            if (itemData.toString() == settings.fallbackIconThemeName()) {
-                index = i;
-                break;
-            }
-        }
+        int index = ui.iconTheme->findData(settings.fallbackIconThemeName());
+        if (index == -1) index = 0;  // Default to first if not found
         ui.iconTheme->setCurrentIndex(index);
+
     } else {
         // icon theme is driven by the environment, hiding the manual override
         ui.iconThemeLabel->hide();
@@ -126,7 +133,7 @@ void PreferencesDialog::initIconThemes(Settings& settings) {
 }
 
 void PreferencesDialog::initArchivers(Settings& settings) {
-    auto& allArchivers = Fm::Archiver::allArchivers();
+    const auto& allArchivers = Fm::Archiver::allArchivers();
     for (int i = 0; i < int(allArchivers.size()); ++i) {
         auto& archiver = allArchivers[i];
         QString program = QString::fromUtf8(archiver->program());
@@ -140,43 +147,22 @@ void PreferencesDialog::initArchivers(Settings& settings) {
 void PreferencesDialog::initDisplayPage(Settings& settings) {
     initIconThemes(settings);
 
-    // icon sizes for big view
-    int i = 0;
-    for (int size : Settings::iconSizes(Settings::Big)) {
-        ui.bigIconSize->addItem(QStringLiteral("%1 x %1").arg(size), size);
-        if (settings.bigIconSize() == size) {
-            ui.bigIconSize->setCurrentIndex(i);
+    // Helper to populate size combos
+    auto setupIconCombo = [](QComboBox* combo, int currentSize, Settings::IconType type) {
+        int i = 0;
+        for (int size : Settings::iconSizes(type)) {
+            combo->addItem(QStringLiteral("%1 x %1").arg(size), size);
+            if (currentSize == size) {
+                combo->setCurrentIndex(i);
+            }
+            ++i;
         }
-        ++i;
-    }
+    };
 
-    // icon sizes for small view and side pane
-    i = 0;
-    for (int size : Settings::iconSizes(Settings::Small)) {
-        QString text = QStringLiteral("%1 x %1").arg(size);
-
-        ui.smallIconSize->addItem(text, size);
-        if (settings.smallIconSize() == size) {
-            ui.smallIconSize->setCurrentIndex(i);
-        }
-
-        ui.sidePaneIconSize->addItem(text, size);
-        if (settings.sidePaneIconSize() == size) {
-            ui.sidePaneIconSize->setCurrentIndex(i);
-        }
-
-        ++i;
-    }
-
-    // thumbnail icon sizes
-    i = 0;
-    for (int size : Settings::iconSizes(Settings::Thumbnail)) {
-        ui.thumbnailIconSize->addItem(QStringLiteral("%1 x %1").arg(size), size);
-        if (settings.thumbnailIconSize() == size) {
-            ui.thumbnailIconSize->setCurrentIndex(i);
-        }
-        ++i;
-    }
+    setupIconCombo(ui.bigIconSize, settings.bigIconSize(), Settings::Big);
+    setupIconCombo(ui.smallIconSize, settings.smallIconSize(), Settings::Small);
+    setupIconCombo(ui.sidePaneIconSize, settings.sidePaneIconSize(), Settings::Small);  // SidePane uses Small sizes
+    setupIconCombo(ui.thumbnailIconSize, settings.thumbnailIconSize(), Settings::Thumbnail);
 
     ui.siUnit->setChecked(settings.siUnit());
     ui.backupAsHidden->setChecked(settings.backupAsHidden());
@@ -186,11 +172,16 @@ void PreferencesDialog::initDisplayPage(Settings& settings) {
     ui.noScrollPerPixel->setChecked(!settings.scrollPerPixel());
 
     // restart warning toggles for settings that affect core view behavior
-    connect(ui.showFullNames, &QAbstractButton::toggled,
-            [this, &settings](bool checked) { restartWarning(settings.showFullNames() != checked); });
+    auto warningToggle = [this](bool changed) { restartWarning(changed); };
 
-    connect(ui.shadowHidden, &QAbstractButton::toggled,
-            [this, &settings](bool checked) { restartWarning(settings.shadowHidden() != checked); });
+    // Note: We capture by value/reference correctly here. The previous code
+    // captured 'settings' by ref, which is safe as long as Application lives longer than Dialog.
+
+    connect(ui.showFullNames, &QAbstractButton::toggled, this,
+            [warningToggle, &settings](bool checked) { warningToggle(settings.showFullNames() != checked); });
+
+    connect(ui.shadowHidden, &QAbstractButton::toggled, this,
+            [warningToggle, &settings](bool checked) { warningToggle(settings.shadowHidden() != checked); });
 }
 
 void PreferencesDialog::initUiPage(Settings& settings) {
@@ -205,7 +196,7 @@ void PreferencesDialog::initUiPage(Settings& settings) {
 
 void PreferencesDialog::initBehaviorPage(Settings& settings) {
     ui.singleClick->setChecked(settings.singleClick());
-    ui.autoSelectionDelay->setValue(double(settings.autoSelectionDelay()) / 1000);
+    ui.autoSelectionDelay->setValue(double(settings.autoSelectionDelay()) / 1000.0);
     ui.ctrlRightClick->setChecked(settings.ctrlRightClick());
 
     ui.bookmarkOpenMethod->setCurrentIndex(settings.bookmarkOpenMethod());
@@ -215,14 +206,9 @@ void PreferencesDialog::initBehaviorPage(Settings& settings) {
     ui.viewMode->addItem(tr("Thumbnail View"), int(Fm::FolderView::ThumbnailMode));
     ui.viewMode->addItem(tr("Detailed List View"), int(Fm::FolderView::DetailedListMode));
 
-    const Fm::FolderView::ViewMode modes[] = {Fm::FolderView::IconMode, Fm::FolderView::CompactMode,
-                                              Fm::FolderView::ThumbnailMode, Fm::FolderView::DetailedListMode};
-
-    for (std::size_t i = 0; i < std::size(modes); ++i) {
-        if (modes[i] == settings.viewMode()) {
-            ui.viewMode->setCurrentIndex(int(i));
-            break;
-        }
+    int index = ui.viewMode->findData(int(settings.viewMode()));
+    if (index != -1) {
+        ui.viewMode->setCurrentIndex(index);
     }
 
     ui.configmDelete->setChecked(settings.confirmDelete());
@@ -240,7 +226,7 @@ void PreferencesDialog::initBehaviorPage(Settings& settings) {
     ui.singleWindowMode->setChecked(settings.singleWindowMode());
     ui.recentFilesSpinBox->setValue(settings.getRecentFilesNumber());
 
-    connect(ui.quickExec, &QAbstractButton::toggled,
+    connect(ui.quickExec, &QAbstractButton::toggled, this,
             [this, &settings](bool checked) { restartWarning(settings.quickExec() != checked); });
 }
 
@@ -250,7 +236,7 @@ void PreferencesDialog::initThumbnailPage(Settings& settings) {
 
     // spin boxes are in MiB, config is stored in KiB
     double m = settings.maxThumbnailFileSize();
-    ui.maxThumbnailFileSize->setValue(std::clamp(m / 1024, 0.0, 1024.0));
+    ui.maxThumbnailFileSize->setValue(std::clamp(m / 1024.0, 0.0, 1024.0));
 
     int m1 = settings.maxExternalThumbnailFileSize();
     ui.maxExternalThumbnailFileSize->setValue(m1 < 0 ? -1 : std::min(m1 / 1024, 2048));
@@ -270,7 +256,7 @@ void PreferencesDialog::initVolumePage(Settings& settings) {
 
 void PreferencesDialog::initTerminals(Settings& settings) {
     // populate terminal list from libfm-qt known terminals
-    for (auto& terminal : Fm::allKnownTerminals()) {
+    for (const auto& terminal : Fm::allKnownTerminals()) {
         ui.terminal->addItem(QString::fromUtf8(terminal.get()));
     }
 
@@ -299,8 +285,7 @@ void PreferencesDialog::terminalChanged(int index) {
 
     QSettings termList(dataDir + QStringLiteral("/libfm-qt/terminals.list"), QSettings::IniFormat);
 
-    const QStringList groups = termList.childGroups();
-    if (groups.contains(term)) {
+    if (termList.childGroups().contains(term)) {
         termList.beginGroup(term);
         ui.terminalExec->setText(termList.value(QStringLiteral("open_arg")).toString());
         ui.terminalCustom->setText(termList.value(QStringLiteral("custom_args")).toString());
@@ -331,15 +316,14 @@ void PreferencesDialog::terminalContextMenu(const QPoint& p) {
             QSettings termList(dataDir + QStringLiteral("/libfm-qt/terminals.list"), QSettings::IniFormat);
 
             term = parts.at(0);
-            const QStringList groups = termList.childGroups();
-            if (groups.contains(term)) {
+            if (termList.childGroups().contains(term)) {
                 termList.remove(term);
                 termList.sync();
 
                 ui.terminal->clear();
                 ui.terminal->clearEditText();
 
-                for (auto& terminal : Fm::allKnownTerminals()) {
+                for (const auto& terminal : Fm::allKnownTerminals()) {
                     ui.terminal->addItem(QString::fromUtf8(terminal.get()));
                 }
             }
@@ -373,7 +357,7 @@ void PreferencesDialog::initAdvancedPage(Settings& settings) {
 }
 
 void PreferencesDialog::initFromSettings() {
-    Settings& settings = static_cast<Application*>(qApp)->settings();
+    Settings& settings = appSettings();
 
     initDisplayPage(settings);
     initUiPage(settings);
@@ -403,10 +387,10 @@ void PreferencesDialog::applyDisplayPage(Settings& settings) {
         }
     }
 
-    settings.setBigIconSize(ui.bigIconSize->itemData(ui.bigIconSize->currentIndex()).toInt());
-    settings.setSmallIconSize(ui.smallIconSize->itemData(ui.smallIconSize->currentIndex()).toInt());
-    settings.setThumbnailIconSize(ui.thumbnailIconSize->itemData(ui.thumbnailIconSize->currentIndex()).toInt());
-    settings.setSidePaneIconSize(ui.sidePaneIconSize->itemData(ui.sidePaneIconSize->currentIndex()).toInt());
+    settings.setBigIconSize(ui.bigIconSize->currentData().toInt());
+    settings.setSmallIconSize(ui.smallIconSize->currentData().toInt());
+    settings.setThumbnailIconSize(ui.thumbnailIconSize->currentData().toInt());
+    settings.setSidePaneIconSize(ui.sidePaneIconSize->currentData().toInt());
 
     settings.setSiUnit(ui.siUnit->isChecked());
     settings.setBackupAsHidden(ui.backupAsHidden->isChecked());
@@ -435,8 +419,7 @@ void PreferencesDialog::applyBehaviorPage(Settings& settings) {
     settings.setBookmarkOpenMethod(OpenDirTargetType(ui.bookmarkOpenMethod->currentIndex()));
 
     // view mode is stored in the user data of the combo box items
-    Fm::FolderView::ViewMode mode =
-        Fm::FolderView::ViewMode(ui.viewMode->itemData(ui.viewMode->currentIndex()).toInt());
+    Fm::FolderView::ViewMode mode = Fm::FolderView::ViewMode(ui.viewMode->currentData().toInt());
     settings.setViewMode(mode);
 
     settings.setConfirmDelete(ui.configmDelete->isChecked());
@@ -484,7 +467,7 @@ void PreferencesDialog::applyTerminal(Settings& settings) {
     const QString dataDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
     if (!dataDir.isEmpty()) {
         bool isGlobal = false;
-        for (auto& terminal : Fm::internalTerminals()) {
+        for (const auto& terminal : Fm::internalTerminals()) {
             if (term == QString::fromUtf8(terminal.get())) {
                 isGlobal = true;
                 break;
@@ -500,8 +483,7 @@ void PreferencesDialog::applyTerminal(Settings& settings) {
             termList.setValue(QStringLiteral("custom_args"), ui.terminalCustom->text());
             termList.endGroup();
         } else {
-            const QStringList groups = termList.childGroups();
-            if (groups.contains(term)) {
+            if (termList.childGroups().contains(term)) {
                 termList.remove(term);
             }
         }
@@ -514,7 +496,7 @@ void PreferencesDialog::applyAdvancedPage(Settings& settings) {
     applyTerminal(settings);
 
     settings.setSuCommand(ui.suCommand->text());
-    settings.setArchiver(ui.archiver->itemData(ui.archiver->currentIndex()).toString());
+    settings.setArchiver(ui.archiver->currentData().toString());
 
     settings.setOnlyUserTemplates(ui.onlyUserTemplates->isChecked());
     settings.setTemplateTypeOnce(ui.templateTypeOnce->isChecked());
@@ -523,7 +505,7 @@ void PreferencesDialog::applyAdvancedPage(Settings& settings) {
 }
 
 void PreferencesDialog::applySettings() {
-    Settings& settings = static_cast<Application*>(qApp)->settings();
+    Settings& settings = appSettings();
 
     applyDisplayPage(settings);
     applyUiPage(settings);
@@ -534,8 +516,7 @@ void PreferencesDialog::applySettings() {
 
     settings.save();
 
-    auto* app = static_cast<Application*>(qApp);
-    app->updateFromSettings();
+    static_cast<Application*>(qApp)->updateFromSettings();
 }
 
 void PreferencesDialog::accept() {
