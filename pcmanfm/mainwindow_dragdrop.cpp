@@ -1,4 +1,7 @@
-/* pcmanfm/mainwindow_dragdrop.cpp */
+/*
+ * Main window drag and drop implementation
+ * pcmanfm/mainwindow_dragdrop.cpp
+ */
 
 #include <QDragEnterEvent>
 #include <QDropEvent>
