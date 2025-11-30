@@ -1,6 +1,24 @@
+/*
+ * Application implementation for PCManFM-Qt
+ * pcmanfm/application.cpp
+ */
+
 #include "application.h"
 
+// C/POSIX Headers
+#include <signal.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+// Std Headers
+#include <algorithm>
+#include <unordered_map>
+#include <vector>
+
+// Glib/Gio Headers
 #include <gio/gio.h>
+
+// LibFM-Qt Headers
 #include <libfm-qt6/core/bookmarks.h>
 #include <libfm-qt6/core/fileinfojob.h>
 #include <libfm-qt6/core/folderconfig.h>
@@ -8,10 +26,8 @@
 #include <libfm-qt6/filepropsdialog.h>
 #include <libfm-qt6/filesearchdialog.h>
 #include <libfm-qt6/mountoperation.h>
-#include <signal.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
+// Qt Headers
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDBusConnection>
@@ -29,9 +45,8 @@
 #include <QStandardPaths>
 #include <QTimer>
 #include <QVector>
-#include <algorithm>
-#include <unordered_map>
 
+// Local Headers
 #include "applicationadaptor.h"
 #include "applicationadaptorfreedesktopfilemanager.h"
 #include "autorundialog.h"
@@ -45,6 +60,10 @@ namespace PCManFM {
 
 static const char* serviceName = "org.pcmanfm.PCManFM";
 static const char* ifaceName = "org.pcmanfm.Application";
+
+//-----------------------------------------------------------------------------
+// ProxyStyle
+//-----------------------------------------------------------------------------
 
 int ProxyStyle::styleHint(StyleHint hint, const QStyleOption* option, const QWidget* widget,
                           QStyleHintReturn* returnData) const {
@@ -60,6 +79,25 @@ int ProxyStyle::styleHint(StyleHint hint, const QStyleOption* option, const QWid
 
     return QProxyStyle::styleHint(hint, option, widget, returnData);
 }
+
+//-----------------------------------------------------------------------------
+// Signal Handling
+//-----------------------------------------------------------------------------
+
+static int sigterm_fd[2];
+
+// Async-signal-safe handler
+static void sigtermHandler(int) {
+    char c = 1;
+    // We ignore the return value because we are in a signal handler
+    // and cannot handle errors effectively/safely here anyway.
+    if (::write(sigterm_fd[0], &c, sizeof(c))) {
+    }
+}
+
+//-----------------------------------------------------------------------------
+// Application Class
+//-----------------------------------------------------------------------------
 
 Application::Application(int& argc, char** argv)
     : QApplication(argc, argv),
@@ -79,6 +117,8 @@ Application::Application(int& argc, char** argv)
     setWindowIcon(QIcon::fromTheme(QStringLiteral("pcmanfm-qt")));
 
     QDBusConnection dbus = QDBusConnection::sessionBus();
+
+    // Attempt to register service. If successful, we are the primary instance.
     if (dbus.registerService(QLatin1String(serviceName))) {
         isPrimaryInstance = true;
 
@@ -94,18 +134,19 @@ Application::Application(int& argc, char** argv)
 
         // also provide the standard org.freedesktop.FileManager1 interface if possible
         const QString fileManagerService = QStringLiteral("org.freedesktop.FileManager1");
+
         if (auto* iface = dbus.interface()) {
             connect(iface, &QDBusConnectionInterface::serviceRegistered, this,
                     [this, fileManagerService](const QString& service) {
                         if (fileManagerService == service) {
-                            QDBusConnection dbus = QDBusConnection::sessionBus();
-                            if (auto* iface = dbus.interface()) {
-                                disconnect(iface, &QDBusConnectionInterface::serviceRegistered, this, nullptr);
+                            QDBusConnection dbusSession = QDBusConnection::sessionBus();
+                            if (auto* ifaceConn = dbusSession.interface()) {
+                                disconnect(ifaceConn, &QDBusConnectionInterface::serviceRegistered, this, nullptr);
                             }
                             new ApplicationAdaptorFreeDesktopFileManager(this);
-                            if (!dbus.registerObject(QStringLiteral("/org/freedesktop/FileManager1"), this)) {
+                            if (!dbusSession.registerObject(QStringLiteral("/org/freedesktop/FileManager1"), this)) {
                                 qDebug() << "Can't register /org/freedesktop/FileManager1:"
-                                         << dbus.lastError().message();
+                                         << dbusSession.lastError().message();
                             }
                         }
                     });
@@ -337,7 +378,8 @@ void Application::onSaveStateRequest(QSessionManager& /*manager*/) {
 }
 
 void Application::onFindFileAccepted() {
-    auto* dlg = qobject_cast<Fm::FileSearchDialog*>(sender());
+    // FIX: Using dynamic_cast because Fm::FileSearchDialog might miss Q_OBJECT macro
+    auto* dlg = dynamic_cast<Fm::FileSearchDialog*>(sender());
     if (!dlg) {
         return;
     }
@@ -360,7 +402,8 @@ void Application::onFindFileAccepted() {
 }
 
 void Application::onConnectToServerAccepted() {
-    auto* dlg = qobject_cast<ConnectServerDialog*>(sender());
+    // FIX: Using dynamic_cast for safety here as well
+    auto* dlg = dynamic_cast<ConnectServerDialog*>(sender());
     if (!dlg) {
         return;
     }
@@ -441,12 +484,12 @@ void Application::launchFiles(const QString& cwd, const QStringList& paths, bool
         MainWindow* window = MainWindow::lastActive();
 
         // if there is no last active window, find the last created MainWindow
+        // Improved: using reverse iterators is cleaner than the manual loop
         if (window == nullptr) {
             const QWidgetList windows = topLevelWidgets();
-            for (int i = 0; i < windows.size(); ++i) {
-                auto* win = windows.at(windows.size() - 1 - i);
-                if (win->inherits("PCManFM::MainWindow")) {
-                    window = static_cast<MainWindow*>(win);
+            for (auto it = windows.rbegin(); it != windows.rend(); ++it) {
+                if ((*it)->inherits("PCManFM::MainWindow")) {
+                    window = static_cast<MainWindow*>(*it);
                     break;
                 }
             }
@@ -563,10 +606,9 @@ void Application::ShowItems(const QStringList& uriList, const QString& startupId
 
         if (window == nullptr) {
             const QWidgetList windows = topLevelWidgets();
-            for (int i = 0; i < windows.size(); ++i) {
-                auto* win = windows.at(windows.size() - 1 - i);
-                if (win->inherits("PCManFM::MainWindow")) {
-                    window = static_cast<MainWindow*>(win);
+            for (auto it = windows.rbegin(); it != windows.rend(); ++it) {
+                if ((*it)->inherits("PCManFM::MainWindow")) {
+                    window = static_cast<MainWindow*>(*it);
                     break;
                 }
             }
@@ -697,14 +739,6 @@ void Application::onVolumeAdded(GVolumeMonitor* /*monitor*/, GVolume* volume, Ap
     }
 }
 
-static int sigterm_fd[2];
-
-static void sigtermHandler(int) {
-    char c = 1;
-    auto written = ::write(sigterm_fd[0], &c, sizeof(c));
-    Q_UNUSED(written);
-}
-
 void Application::installSigtermHandler() {
     if (::socketpair(AF_UNIX, SOCK_STREAM, 0, sigterm_fd) == 0) {
         auto* notifier = new QSocketNotifier(sigterm_fd[1], QSocketNotifier::Read, this);
@@ -732,8 +766,8 @@ void Application::onSigtermNotified() {
     notifier->setEnabled(false);
 
     char c;
-    auto readCount = ::read(sigterm_fd[1], &c, sizeof(c));
-    Q_UNUSED(readCount);
+    if (::read(sigterm_fd[1], &c, sizeof(c))) {
+    }
 
     // close all main windows cleanly before quitting
     const auto windows = topLevelWidgets();
