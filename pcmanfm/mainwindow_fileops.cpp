@@ -1,20 +1,32 @@
-/* pcmanfm/mainwindow_fileops.cpp */
-
-#include <libfm-qt6/fileoperation.h>
-#include <libfm-qt6/filepropsdialog.h>
-#include <libfm-qt6/utilities.h>
-
-#include <QAbstractItemView>
-#include <QApplication>
-#include <QClipboard>
-#include <QMessageBox>
+/*
+ * Main window file operations implementation
+ * pcmanfm/mainwindow_fileops.cpp
+ */
 
 #include "application.h"
 #include "bulkrename.h"
 #include "mainwindow.h"
 #include "tabpage.h"
 
+// LibFM-Qt Headers
+#include <libfm-qt6/fileoperation.h>
+#include <libfm-qt6/filepropsdialog.h>
+#include <libfm-qt6/utilities.h>
+
+// Qt Headers
+#include <QAbstractItemView>
+#include <QApplication>
+#include <QClipboard>
+#include <QMessageBox>
+
 namespace PCManFM {
+
+namespace {
+
+// Helper to access Application settings concisely
+Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+
+}  // namespace
 
 void MainWindow::on_actionFileProperties_triggered() {
     TabPage* page = currentPage();
@@ -52,7 +64,9 @@ void MainWindow::on_actionCopy_triggered() {
     }
 
     auto paths = page->selectedFilePaths();
-    copyFilesToClipboard(paths);
+    if (!paths.empty()) {
+        copyFilesToClipboard(paths);
+    }
 }
 
 void MainWindow::on_actionCut_triggered() {
@@ -62,7 +76,9 @@ void MainWindow::on_actionCut_triggered() {
     }
 
     auto paths = page->selectedFilePaths();
-    cutFilesToClipboard(paths);
+    if (!paths.empty()) {
+        cutFilesToClipboard(paths);
+    }
 }
 
 void MainWindow::on_actionPaste_triggered() {
@@ -75,23 +91,21 @@ void MainWindow::on_actionPaste_triggered() {
 }
 
 void MainWindow::on_actionDelete_triggered() {
-    auto* app = qobject_cast<Application*>(qApp);
-    if (!app) {
-        return;
-    }
-
     TabPage* page = currentPage();
     if (!page) {
         return;
     }
 
-    Settings& settings = app->settings();
+    Settings& settings = appSettings();
     auto paths = page->selectedFilePaths();
     if (paths.empty()) {
         return;
     }
 
-    const bool trashed = paths.cbegin() != paths.cend() && paths.cbegin()->hasUriScheme("trash");
+    // Check if files are already in trash
+    const bool trashed =
+        std::any_of(paths.cbegin(), paths.cend(), [](const auto& path) { return path.hasUriScheme("trash"); });
+
     const bool shiftPressed = (qApp->keyboardModifiers() & Qt::ShiftModifier);
 
     if (settings.useTrash() && !shiftPressed && !trashed) {
@@ -110,6 +124,8 @@ void MainWindow::on_actionRename_triggered() {
     }
 
     auto files = page->selectedFiles();
+
+    // Case 1: Inline rename
     if (files.size() == 1) {
         QAbstractItemView* view = page->folderView()->childView();
         if (!view || !view->selectionModel()) {
@@ -117,18 +133,20 @@ void MainWindow::on_actionRename_triggered() {
         }
 
         QModelIndexList selIndexes = view->selectionModel()->selectedIndexes();
-        if (selIndexes.size() > 1) {  // in the detailed list mode, only the first index is editable
-            view->setCurrentIndex(selIndexes.at(0));
-        }
 
-        const QModelIndex cur = view->currentIndex();
-        if (cur.isValid()) {
-            view->scrollTo(cur);
-            view->edit(cur);
-            return;
+        // In the detailed list mode, multiple columns might be selected for one row.
+        // We ensure we edit the primary column (filename).
+        if (!selIndexes.isEmpty()) {
+            const QModelIndex editIndex = selIndexes.first();
+            view->setCurrentIndex(editIndex);
+            view->scrollTo(editIndex);
+            view->edit(editIndex);
         }
+        return;
     }
 
+    // Case 2: Multi-file rename (sequential dialogs)
+    // NOTE: For true bulk rename, use on_actionBulkRename_triggered
     if (!files.empty()) {
         for (auto& file : files) {
             if (!Fm::renameFile(file, this)) {
@@ -144,34 +162,28 @@ void MainWindow::on_actionBulkRename_triggered() {
         return;
     }
 
-    BulkRenamer(page->selectedFiles(), this);
+    auto files = page->selectedFiles();
+    if (!files.empty()) {
+        BulkRenamer(files, this);
+    }
 }
 
 void MainWindow::on_actionSelectAll_triggered() {
-    TabPage* page = currentPage();
-    if (!page) {
-        return;
+    if (TabPage* page = currentPage()) {
+        page->selectAll();
     }
-
-    page->selectAll();
 }
 
 void MainWindow::on_actionDeselectAll_triggered() {
-    TabPage* page = currentPage();
-    if (!page) {
-        return;
+    if (TabPage* page = currentPage()) {
+        page->deselectAll();
     }
-
-    page->deselectAll();
 }
 
 void MainWindow::on_actionInvertSelection_triggered() {
-    TabPage* page = currentPage();
-    if (!page) {
-        return;
+    if (TabPage* page = currentPage()) {
+        page->invertSelection();
     }
-
-    page->invertSelection();
 }
 
 void MainWindow::on_actionCopyFullPath_triggered() {
@@ -182,23 +194,19 @@ void MainWindow::on_actionCopyFullPath_triggered() {
 
     auto paths = page->selectedFilePaths();
     if (paths.size() == 1) {
-        QApplication::clipboard()->setText(QString::fromUtf8(paths.front().toString().get()), QClipboard::Clipboard);
+        // Use QString fromUtf8 explicitly
+        QApplication::clipboard()->setText(QString::fromUtf8(paths.front().toString().get()));
     }
 }
 
 void MainWindow::on_actionCleanPerFolderConfig_triggered() {
-    const auto r =
-        QMessageBox::question(this, tr("Cleaning Folder Settings"),
-                              tr("Do you want to remove settings of nonexistent folders?\nThey might be useful if "
-                                 "those folders are created again."),
-                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    const auto r = QMessageBox::question(this, tr("Cleaning Folder Settings"),
+                                         tr("Do you want to remove settings of nonexistent folders?\nThey might be "
+                                            "useful if those folders are created again."),
+                                         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
 
     if (r == QMessageBox::Yes) {
-        auto* app = qobject_cast<Application*>(qApp);
-        if (!app) {
-            return;
-        }
-        app->cleanPerFolderConfig();
+        static_cast<Application*>(qApp)->cleanPerFolderConfig();
     }
 }
 
@@ -209,12 +217,14 @@ void MainWindow::openFolderAndSelectFiles(const Fm::FilePathList& files, bool in
 
     if (auto path = files.front().parent()) {
         if (!inNewTab) {
+            // Open in new window
             auto* win = new MainWindow(path);
             win->show();
             if (auto* page = win->currentPage()) {
                 page->setFilesToSelect(files);
             }
         } else {
+            // Open in new tab
             auto* newPage = new TabPage(this);
             addTabWithPage(newPage, activeViewFrame_, std::move(path));
             newPage->setFilesToSelect(files);
