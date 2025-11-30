@@ -1,6 +1,7 @@
 /* pcmanfm/mainwindow_bookmarks.cpp */
 
 #include <QAction>
+#include <QDir>
 #include <QMenu>
 
 #include "application.h"
@@ -12,41 +13,52 @@ namespace PCManFM {
 void MainWindow::loadBookmarksMenu() {
     // Clear previously inserted dynamic bookmark actions
     auto* menu = ui.menu_Bookmarks;
-    const auto actions = menu->actions();
-
-    for (QAction* action : actions) {
-        // use a custom property to identify bookmark actions if you want
-        if (action->property("pcmanfm_bookmark").toBool()) {
-            menu->removeAction(action);
-            delete action;
-        }
+    if (!menu) {
+        return;
     }
 
-    // TODO: if you want real bookmark entries here, repopulate from your
-    //       backend (libfm-qt bookmarks, config, etc.)
+    const auto actions = menu->actions();
+    for (auto* action : actions) {
+        if (!action) {
+            continue;
+        }
+
+        // identify bookmark actions via a custom property
+        if (action->property("pcmanfm_bookmark").toBool()) {
+            menu->removeAction(action);
+            action->deleteLater();
+        }
+    }
 }
 
 void MainWindow::onBookmarksChanged() { loadBookmarksMenu(); }
 
 void MainWindow::onBookmarkActionTriggered() {
-    auto* action = qobject_cast<QAction*>(sender());
+    const auto* action = qobject_cast<QAction*>(sender());
     if (!action) {
         return;
     }
 
-    const QString pathStr = action->data().toString();
+    const QVariant data = action->data();
+    if (!data.isValid()) {
+        return;
+    }
+
+    const QString pathStr = data.toString();
     if (pathStr.isEmpty()) {
         return;
     }
 
-    const QByteArray pathArray = pathStr.toLocal8Bit();
-    chdir(Fm::FilePath::fromPathStr(pathArray.constData()));
+    QDir::setCurrent(pathStr);
 }
 
 void MainWindow::on_actionAddToBookmarks_triggered() {
-    auto* app = static_cast<Application*>(qApp);
+    auto* app = qobject_cast<Application*>(qApp);
+    if (!app) {
+        return;
+    }
 
-    // Delegate to Application's existing bookmark editor
+    // delegate to Application's existing bookmark editor
     app->editBookmarks();
 }
 
