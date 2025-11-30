@@ -1,13 +1,44 @@
-/* pcmanfm/mainwindow.cpp */
+/*
+ * Main window implementation for PCManFM-Qt
+ * pcmanfm/mainwindow.cpp
+ */
 
 #include "mainwindow.h"
 
 #include "application.h"
 #include "settings.h"
+#include "tabpage.h"
+
+// Qt Headers
+#include <QApplication>
+#include <QDir>   // <--- Added for QDir
+#include <QFile>  // <--- Added for QFile
+#include <QFrame>
+#include <QIcon>
+#include <QInputDialog>
+#include <QLabel>
+#include <QMenu>
+#include <QMessageBox>
+#include <QShortcut>
+#include <QSplitter>
+#include <QStyle>
+#include <QTimer>
+#include <QToolButton>
+
+// LibFM-Qt Headers
+#include <libfm-qt6/browsehistory.h>
+#include <libfm-qt6/core/folder.h>  // <--- Added for Fm::Folder
+#include <libfm-qt6/utilities.h>
 
 namespace PCManFM {
 
 QPointer<MainWindow> MainWindow::lastActive_;
+
+namespace {
+
+Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+
+}  // namespace
 
 MainWindow::MainWindow(Fm::FilePath path)
     : pathEntry_(nullptr),
@@ -22,29 +53,32 @@ MainWindow::MainWindow(Fm::FilePath path)
       splitView_(false),
       splitTabsNum_(0),
       deleteShortcut_(nullptr) {
-    // Setup UI from the generated header
     ui.setupUi(this);
 
-    // Create filesystem info label and add to status bar
+    // Initialize Back/Forward buttons context menu policy
+    ui.actionGoBack->setMenuRole(QAction::NoRole);
+
     fsInfoLabel_ = new QLabel(this);
     fsInfoLabel_->setFrameShape(QFrame::NoFrame);
     fsInfoLabel_->setContentsMargins(4, 0, 4, 0);
     fsInfoLabel_->setVisible(false);
-    ui.statusbar->addPermanentWidget(fsInfoLabel_);
 
-    // Initialize the window
-    auto* app = qobject_cast<Application*>(qApp);
-    if (app) {
-        Settings& settings = app->settings();
+    if (ui.statusbar) {
+        ui.statusbar->addPermanentWidget(fsInfoLabel_);
+    }
 
-        // Initialize side pane
+    Settings& settings = appSettings();
+
+    // Initialize side pane
+    if (ui.sidePane) {
         ui.sidePane->setVisible(settings.isSidePaneVisible());
-        ui.actionSidePane->setChecked(settings.isSidePaneVisible());
+        if (ui.actionSidePane) {
+            ui.actionSidePane->setChecked(settings.isSidePaneVisible());
+        }
         ui.sidePane->setIconSize(QSize(settings.sidePaneIconSize(), settings.sidePaneIconSize()));
         ui.sidePane->setMode(settings.sidePaneMode());
         ui.sidePane->restoreHiddenPlaces(settings.getHiddenPlaces());
 
-        // Connect side pane signals
         connect(ui.sidePane, &Fm::SidePane::chdirRequested, this, &MainWindow::onSidePaneChdirRequested);
         connect(ui.sidePane, &Fm::SidePane::openFolderInNewWindowRequested, this,
                 &MainWindow::onSidePaneOpenFolderInNewWindowRequested);
@@ -56,138 +90,336 @@ MainWindow::MainWindow(Fm::FilePath path)
                 &MainWindow::onSidePaneCreateNewFolderRequested);
         connect(ui.sidePane, &Fm::SidePane::modeChanged, this, &MainWindow::onSidePaneModeChanged);
         connect(ui.sidePane, &Fm::SidePane::hiddenPlaceSet, this, &MainWindow::onSettingHiddenPlace);
-
-        // Initialize splitter
-        connect(ui.splitter, &QSplitter::splitterMoved, this, &MainWindow::onSplitterMoved);
-        ui.splitter->setStretchFactor(1, 1);  // only the right pane can be stretched
-        ui.splitter->setSizes({settings.splitterPos(), 1});
-
-        // Initialize view action icons
-        ui.actionIconView->setIcon(QIcon::fromTheme(QLatin1String("view-list-icons"),
-                                                    style()->standardIcon(QStyle::SP_FileDialogContentsView)));
-        ui.actionThumbnailView->setIcon(QIcon::fromTheme(QLatin1String("view-list-icons"),
-                                                         style()->standardIcon(QStyle::SP_FileDialogContentsView)));
-        ui.actionCompactView->setIcon(QIcon::fromTheme(QLatin1String("view-list-details"),
-                                                       style()->standardIcon(QStyle::SP_FileDialogDetailedView)));
-        ui.actionDetailedList->setIcon(QIcon::fromTheme(QLatin1String("view-list-details"),
-                                                        style()->standardIcon(QStyle::SP_FileDialogDetailedView)));
-
-        updateFromSettings(settings);
     }
+
+    // Initialize splitter
+    if (ui.splitter) {
+        connect(ui.splitter, &QSplitter::splitterMoved, this, &MainWindow::onSplitterMoved);
+        ui.splitter->setStretchFactor(1, 1);
+        ui.splitter->setSizes({settings.splitterPos(), 1});
+    }
+
+    // Initialize standard view action icons
+    auto setActionIcon = [this](QAction* action, const QString& themeIcon, QStyle::StandardPixmap standardIcon) {
+        if (action) {
+            action->setIcon(QIcon::fromTheme(themeIcon, style()->standardIcon(standardIcon)));
+        }
+    };
+
+    setActionIcon(ui.actionIconView, QStringLiteral("view-list-icons"), QStyle::SP_FileDialogContentsView);
+    setActionIcon(ui.actionThumbnailView, QStringLiteral("view-list-icons"), QStyle::SP_FileDialogContentsView);
+    setActionIcon(ui.actionCompactView, QStringLiteral("view-list-details"), QStyle::SP_FileDialogDetailedView);
+    setActionIcon(ui.actionDetailedList, QStringLiteral("view-list-details"), QStyle::SP_FileDialogDetailedView);
+
+    updateFromSettings(settings);
 
     // Add initial view frame
     addViewFrame(path);
 
-    // Set window title
     setWindowTitle(QStringLiteral("PCManFM-Qt"));
 
-    // Create manual shortcut for Delete key to work around Qt action shortcut issues
     deleteShortcut_ = new QShortcut(QKeySequence(Qt::Key_Delete), this);
     connect(deleteShortcut_, &QShortcut::activated, this, &MainWindow::on_actionDelete_triggered);
+
+    // Explicit connections for menu actions (fallback if automatic connections fail)
+    connect(ui.actionNewTab, &QAction::triggered, this, &MainWindow::on_actionNewTab_triggered);
+    connect(ui.actionNewWin, &QAction::triggered, this, &MainWindow::on_actionNewWin_triggered);
+    connect(ui.actionNewFolder, &QAction::triggered, this, &MainWindow::on_actionNewFolder_triggered);
+    connect(ui.actionIconView, &QAction::triggered, this, &MainWindow::on_actionIconView_triggered);
+    connect(ui.actionCompactView, &QAction::triggered, this, &MainWindow::on_actionCompactView_triggered);
+    connect(ui.actionDetailedList, &QAction::triggered, this, &MainWindow::on_actionDetailedList_triggered);
+    connect(ui.actionThumbnailView, &QAction::triggered, this, &MainWindow::on_actionThumbnailView_triggered);
+
+    lastActive_ = this;
 }
 
 MainWindow::~MainWindow() {
-    // Destructor implementation
+    if (lastActive_ == this) {
+        lastActive_ = nullptr;
+    }
 }
 
-void MainWindow::updateFromSettings(Settings& settings) {
-    // Apply settings to the window
-    splitView_ = settings.splitView();
+//-----------------------------------------------------------------------------
+// File Menu Actions
+//-----------------------------------------------------------------------------
 
-    // Update side pane visibility
-    if (ui.sidePane) {
-        ui.sidePane->setVisible(settings.isSidePaneVisible());
+void MainWindow::on_actionNewTab_triggered() {
+    Fm::FilePath path;
+    if (TabPage* page = currentPage()) {
+        path = page->path();
+    } else {
+        path = Fm::FilePath::homeDir();
     }
 
-    // Update side pane mode
-    if (ui.sidePane) {
-        ui.sidePane->setMode(settings.sidePaneMode());
+    addTab(path);
+}
+
+void MainWindow::on_actionNewWin_triggered() {
+    Fm::FilePath path;
+    if (TabPage* page = currentPage()) {
+        path = page->path();
+    } else {
+        path = Fm::FilePath::homeDir();
     }
 
-    // Update splitter position
-    if (ui.splitter) {
-        ui.splitter->setSizes({settings.splitterPos(), 1});
+    auto* win = new MainWindow(path);
+    Settings& settings = appSettings();
+    win->resize(settings.windowWidth(), settings.windowHeight());
+    if (settings.windowMaximized()) {
+        win->setWindowState(win->windowState() | Qt::WindowMaximized);
     }
-
-    // Update menu bar visibility
-    ui.menubar->setVisible(settings.showMenuBar());
-
-    // Toolbar visibility is not configurable - always visible
+    win->show();
 }
 
-void MainWindow::setRTLIcons(bool isRTL) {
-    // RTL icons implementation
-}
+void MainWindow::on_actionNewFolder_triggered() {
+    if (TabPage* page = currentPage()) {
+        bool ok = false;
+        QString name =
+            QInputDialog::getText(this, tr("New Folder"), tr("Folder Name:"), QLineEdit::Normal, tr("New Folder"), &ok);
+        if (!ok || name.isEmpty()) return;
 
-void MainWindow::onTabPageTitleChanged() {
-    // Tab page title changed implementation
-}
+        // Get a Folder object for the current directory
+        // Fm::Folder::fromPath returns a std::shared_ptr<Fm::Folder>
+        auto folder = Fm::Folder::fromPath(page->path());
+        if (!folder) {
+            QMessageBox::warning(this, tr("Error"), tr("Failed to access current folder"));
+            return;
+        }
 
-void MainWindow::onTabPageStatusChanged(int type, QString statusText) {
-    if (type == TabPage::StatusTextFSInfo) {
-        // Update filesystem info label
-        if (fsInfoLabel_) {
-            fsInfoLabel_->setText(statusText);
-            fsInfoLabel_->setVisible(!statusText.isEmpty());
+        GError* err = nullptr;
+        QByteArray utf8Name = name.toUtf8();
+
+        // makeDirectory signature in libfm-qt6 core:
+        // bool makeDirectory(const char* name, GError** error, GCancellable* cancellable = nullptr)
+        if (!folder->makeDirectory(utf8Name.constData(), &err)) {
+            QString msg = tr("Failed to create folder \"%1\"").arg(name);
+            if (err) {
+                msg += QLatin1Char('\n');
+                msg += QString::fromUtf8(err->message);
+                g_error_free(err);
+            }
+            QMessageBox::warning(this, tr("Error"), msg);
         }
     }
 }
 
-void MainWindow::onTabPageSortFilterChanged() {
-    // Tab page sort filter changed implementation
+void MainWindow::on_actionNewBlankFile_triggered() {
+    if (TabPage* page = currentPage()) {
+        bool ok = false;
+        QString name =
+            QInputDialog::getText(this, tr("New File"), tr("File Name:"), QLineEdit::Normal, tr("New File"), &ok);
+        if (!ok || name.isEmpty()) return;
+
+        // Verify we are dealing with a local path
+        if (!page->path().isNative()) {
+            QMessageBox::warning(this, tr("Error"),
+                                 tr("Creating blank files is currently supported only on local file systems."));
+            return;
+        }
+
+        // Convert Fm::FilePath to a local filesystem path string
+        // localPath() returns a CStrPtr, get() gives the const char*
+        QString dirPath = QString::fromUtf8(page->path().localPath().get());
+        QDir dir(dirPath);
+
+        QString filePath = dir.filePath(name);
+        QFile file(filePath);
+
+        if (!file.open(QIODevice::WriteOnly | QIODevice::NewOnly)) {
+            QMessageBox::warning(this, tr("Error"),
+                                 tr("Failed to create file \"%1\": %2").arg(name, file.errorString()));
+            return;
+        }
+
+        file.close();
+    }
 }
 
-void MainWindow::onFolderUnmounted() {
-    // Folder unmounted implementation
+void MainWindow::on_actionCreateLauncher_triggered() {
+    if (TabPage* page = currentPage()) {
+        Q_UNUSED(page);
+        // Implementation placeholder
+    }
 }
+
+void MainWindow::on_actionCloseWindow_triggered() { close(); }
+
+void MainWindow::on_actionCloseTab_triggered() {
+    if (activeViewFrame_) {
+        int currentIndex = activeViewFrame_->getStackedWidget()->currentIndex();
+        if (currentIndex != -1) {
+            closeTab(currentIndex, activeViewFrame_);
+        }
+    }
+}
+
+void MainWindow::on_actionPreferences_triggered() { static_cast<Application*>(qApp)->preferences(QString()); }
+
+void MainWindow::on_actionEditBookmarks_triggered() { static_cast<Application*>(qApp)->editBookmarks(); }
+
+void MainWindow::on_actionAbout_triggered() {
+    QMessageBox::about(this, tr("About PCManFM-Qt"),
+                       tr("PCManFM-Qt is a file manager for LXQt.\n\n"
+                          "Copyright (C) 2013-2024 LXQt Team\n"));
+}
+
+//-----------------------------------------------------------------------------
+// View Menu Toggles
+//-----------------------------------------------------------------------------
+
+void MainWindow::on_actionSplitView_triggered(bool check) {
+    if (check == splitView_) {
+        return;
+    }
+
+    splitView_ = check;
+    appSettings().setSplitView(check);
+
+    if (splitView_) {
+        // Enable Split: Add a second ViewFrame
+        Fm::FilePath path;
+        if (TabPage* page = currentPage()) {
+            path = page->path();
+        } else {
+            path = Fm::FilePath::homeDir();
+        }
+
+        addViewFrame(path);
+        createPathBar(appSettings().pathBarButtons());
+
+        if (ui.viewSplitter->count() > 1) {
+            activeViewFrame_ = qobject_cast<ViewFrame*>(ui.viewSplitter->widget(1));
+            updateUIForCurrentPage();
+        }
+    } else {
+        // Disable Split: Remove the second ViewFrame
+        if (ui.viewSplitter->count() > 1) {
+            auto* secondFrame = ui.viewSplitter->widget(1);
+            secondFrame->deleteLater();
+
+            activeViewFrame_ = qobject_cast<ViewFrame*>(ui.viewSplitter->widget(0));
+            createPathBar(appSettings().pathBarButtons());
+            updateUIForCurrentPage();
+        }
+    }
+}
+
+void MainWindow::on_actionSidePane_triggered(bool check) {
+    if (ui.sidePane) {
+        ui.sidePane->setVisible(check);
+        // Persist setting here if your Settings class supports it
+    }
+}
+
+//-----------------------------------------------------------------------------
+// Other event handlers
+//-----------------------------------------------------------------------------
+
+void MainWindow::updateFromSettings(Settings& settings) {
+    splitView_ = settings.splitView();
+
+    if (ui.sidePane) {
+        ui.sidePane->setVisible(settings.isSidePaneVisible());
+    }
+    if (ui.splitter) {
+        ui.splitter->setSizes({settings.splitterPos(), 1});
+    }
+    if (ui.menubar) {
+        ui.menubar->setVisible(settings.showMenuBar());
+    }
+}
+
+void MainWindow::setRTLIcons(bool isRTL) {
+    if (isRTL) {
+        ui.actionGoBack->setIcon(
+            QIcon::fromTheme(QStringLiteral("go-next"), style()->standardIcon(QStyle::SP_ArrowRight)));
+        ui.actionGoForward->setIcon(
+            QIcon::fromTheme(QStringLiteral("go-previous"), style()->standardIcon(QStyle::SP_ArrowLeft)));
+    } else {
+        ui.actionGoBack->setIcon(
+            QIcon::fromTheme(QStringLiteral("go-previous"), style()->standardIcon(QStyle::SP_ArrowLeft)));
+        ui.actionGoForward->setIcon(
+            QIcon::fromTheme(QStringLiteral("go-next"), style()->standardIcon(QStyle::SP_ArrowRight)));
+    }
+}
+
+void MainWindow::onTabPageTitleChanged() { updateUIForCurrentPage(); }
+
+void MainWindow::onTabPageStatusChanged(int type, QString statusText) {
+    if (type == TabPage::StatusTextFSInfo) {
+        if (fsInfoLabel_) {
+            fsInfoLabel_->setText(statusText);
+            fsInfoLabel_->setVisible(!statusText.isEmpty());
+        }
+    } else {
+        if (ui.statusbar) {
+            ui.statusbar->showMessage(statusText);
+        }
+    }
+}
+
+void MainWindow::onTabPageSortFilterChanged() { updateViewMenuForCurrentPage(); }
+
+void MainWindow::onFolderUnmounted() { updateUIForCurrentPage(); }
 
 void MainWindow::onTabBarClicked(int index) {
-    // Tab bar clicked implementation
+    Q_UNUSED(index);
+    if (activeViewFrame_) {
+        if (TabPage* page = currentPage()) {
+            if (page->folderView() && page->folderView()->childView()) {
+                page->folderView()->childView()->setFocus();
+            }
+        }
+    }
 }
 
 void MainWindow::tabContextMenu(const QPoint& pos) {
-    // Tab context menu implementation
-}
+    if (!activeViewFrame_) return;
 
-void MainWindow::on_actionNewTab_triggered() {
-    // New tab action implementation
-}
+    QMenu menu(this);
+    menu.addAction(tr("Close Tab"), this, &MainWindow::on_actionCloseTab_triggered);
+    menu.addAction(tr("Close Other Tabs"), this, [this] {
+        closeLeftTabs();
+        closeRightTabs();
+    });
+    menu.addAction(tr("Close Tabs to Left"), this, &MainWindow::closeLeftTabs);
+    menu.addAction(tr("Close Tabs to Right"), this, &MainWindow::closeRightTabs);
 
-void MainWindow::on_actionSplitView_triggered(bool check) {
-    // Split view action implementation
-}
-
-void MainWindow::on_actionPreferences_triggered() {
-    // Preferences action implementation
-}
-
-void MainWindow::on_actionEditBookmarks_triggered() {
-    // Edit bookmarks action implementation
-}
-
-void MainWindow::on_actionAbout_triggered() {
-    // About action implementation
+    menu.exec(activeViewFrame_->getTabBar()->mapToGlobal(pos));
 }
 
 void MainWindow::on_actionHiddenShortcuts_triggered() {
-    // Hidden shortcuts action implementation
+    // Placeholder for hidden shortcuts help dialog
 }
 
 void MainWindow::onShortcutPrevTab() {
-    // Previous tab shortcut implementation
+    if (activeViewFrame_) {
+        auto* tab = activeViewFrame_->getTabBar();
+        int idx = tab->currentIndex();
+        if (idx > 0)
+            tab->setCurrentIndex(idx - 1);
+        else
+            tab->setCurrentIndex(tab->count() - 1);  // Wrap
+    }
 }
 
 void MainWindow::onShortcutNextTab() {
-    // Next tab shortcut implementation
+    if (activeViewFrame_) {
+        auto* tab = activeViewFrame_->getTabBar();
+        int idx = tab->currentIndex();
+        if (idx < tab->count() - 1)
+            tab->setCurrentIndex(idx + 1);
+        else
+            tab->setCurrentIndex(0);  // Wrap
+    }
 }
 
 void MainWindow::onShortcutJumpToTab() {
-    // Jump to tab shortcut implementation
+    // Logic for Alt+1, Alt+2 etc
 }
 
 void MainWindow::onSidePaneChdirRequested(int type, const Fm::FilePath& path) {
-    // FIXME: use enum for type value or change it to button.
-    if (type == 0) {  // left button (default)
+    if (type == 0) {  // left button
         chdir(path);
     } else if (type == 1) {  // middle button
         addTab(path);
@@ -201,67 +433,53 @@ void MainWindow::onSidePaneOpenFolderInNewWindowRequested(const Fm::FilePath& pa
 void MainWindow::onSidePaneOpenFolderInNewTabRequested(const Fm::FilePath& path) { addTab(path); }
 
 void MainWindow::onSidePaneOpenFolderInTerminalRequested(const Fm::FilePath& path) {
-    Application* app = static_cast<Application*>(qApp);
-    app->openFolderInTerminal(path);
+    static_cast<Application*>(qApp)->openFolderInTerminal(path);
 }
 
 void MainWindow::onSidePaneCreateNewFolderRequested(const Fm::FilePath& path) {
-    // For now, navigate to the path and trigger new folder action
-    // This is a temporary implementation until proper file creation is available
     chdir(path);
-    // TODO: Implement proper folder creation at the specified path
+    QTimer::singleShot(100, this, &MainWindow::on_actionNewFolder_triggered);
 }
 
-void MainWindow::onSidePaneModeChanged(Fm::SidePane::Mode mode) {
-    static_cast<Application*>(qApp)->settings().setSidePaneMode(mode);
-}
-
-void MainWindow::on_actionSidePane_triggered(bool check) {
-    // Side pane action implementation
-}
+void MainWindow::onSidePaneModeChanged(Fm::SidePane::Mode mode) { appSettings().setSidePaneMode(mode); }
 
 void MainWindow::onSplitterMoved(int pos, int index) {
-    // Splitter moved implementation
+    Q_UNUSED(index);
+    appSettings().setSplitterPos(pos);
 }
 
 void MainWindow::onBackForwardContextMenu(QPoint pos) {
-    // Back/forward context menu implementation
+    auto* btn = qobject_cast<QToolButton*>(sender());
+    if (!btn) return;
+
+    // BrowseHistory access disabled due to private API limitation in libfm-qt6
+    Q_UNUSED(pos);
 }
 
 void MainWindow::closeLeftTabs() {
-    // Close left tabs implementation
+    if (!activeViewFrame_) return;
+
+    int currentIndex = activeViewFrame_->getStackedWidget()->currentIndex();
+
+    // Close from left-most neighbor (index 0) up to current-1.
+    // Close in reverse order to maintain indices
+    for (int i = currentIndex - 1; i >= 0; --i) {
+        closeTab(i, activeViewFrame_);
+    }
 }
 
 void MainWindow::closeRightTabs() {
-    // Close right tabs implementation
+    if (!activeViewFrame_) return;
+
+    int currentIndex = activeViewFrame_->getStackedWidget()->currentIndex();
+    int count = activeViewFrame_->getStackedWidget()->count();
+
+    // Close from the last tab down to current+1.
+    for (int i = count - 1; i > currentIndex; --i) {
+        closeTab(i, activeViewFrame_);
+    }
 }
 
-void MainWindow::onSettingHiddenPlace(const QString& str, bool hide) {
-    static_cast<Application*>(qApp)->settings().setHiddenPlace(str, hide);
-}
-
-void MainWindow::on_actionCreateLauncher_triggered() {
-    // Create launcher action implementation
-}
-
-void MainWindow::on_actionNewBlankFile_triggered() {
-    // New blank file action implementation
-}
-
-void MainWindow::on_actionNewWin_triggered() {
-    // New window action implementation
-}
-
-void MainWindow::on_actionCloseWindow_triggered() {
-    // Close window action implementation
-}
-
-void MainWindow::on_actionNewFolder_triggered() {
-    // New folder action implementation
-}
-
-void MainWindow::on_actionCloseTab_triggered() {
-    // Close tab action implementation
-}
+void MainWindow::onSettingHiddenPlace(const QString& str, bool hide) { appSettings().setHiddenPlace(str, hide); }
 
 }  // namespace PCManFM
