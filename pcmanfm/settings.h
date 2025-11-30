@@ -64,6 +64,13 @@ class FolderSettings {
 
     void setViewMode(Fm::FolderView::ViewMode value) { viewMode_ = value; }
 
+    // Conversion functions (implemented in settings.cpp)
+    static Fm::FolderView::ViewMode viewModeFromString(const QString str);
+    static Qt::SortOrder sortOrderFromString(const QString str);
+    static Fm::FolderModel::ColumnId sortColumnFromString(const QString str);
+    static Fm::SidePane::Mode sidePaneModeFromString(const QString& str);
+    static OpenDirTargetType bookmarkOpenMethodFromString(const QString str);
+
     bool sortFolderFirst() const { return sortFolderFirst_; }
 
     void setSortFolderFirst(bool value) { sortFolderFirst_ = value; }
@@ -116,6 +123,12 @@ class Settings : public QObject {
     static QString xdgUserConfigDir();
     static const QList<int>& iconSizes(IconType type);
     static int wallpaperModeFromString(const QString str);
+
+    // String conversion utilities
+    static const char* viewModeToString(Fm::FolderView::ViewMode value);
+    static const char* sortOrderToString(Qt::SortOrder order);
+    static const char* sortColumnToString(Fm::FolderModel::ColumnId value);
+    static const char* sidePaneModeToString(Fm::SidePane::Mode value);
 
     QString profileDir(QString profile, bool useFallback = false);
 
