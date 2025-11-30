@@ -3,6 +3,7 @@
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMimeData>
+#include <QPointer>
 #include <QTimer>
 
 #include "application.h"
@@ -17,14 +18,13 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event) {
         return;
     }
 
-    const auto* mime = event->mimeData();
-    if (!mime) {
+    const QMimeData* mime = event->mimeData();
+    if (!mime || !mime->hasFormat(QStringLiteral("application/pcmanfm-qt-tab"))) {
         return;
     }
 
-    if (mime->hasFormat(QStringLiteral("application/pcmanfm-qt-tab"))
-        // ensure that the tab drag source is ours (and not a root window, for example)
-        && event->source() != nullptr) {
+    // ensure that the tab drag source is ours (and not a root window, for example)
+    if (event->source()) {
         event->acceptProposedAction();
     }
 }
@@ -34,13 +34,19 @@ void MainWindow::dropEvent(QDropEvent* event) {
         return;
     }
 
-    const auto* mime = event->mimeData();
+    const QMimeData* mime = event->mimeData();
     if (mime && mime->hasFormat(QStringLiteral("application/pcmanfm-qt-tab"))) {
         if (QObject* sourceObject = event->source()) {
             // announce that the tab drop is accepted by us (see TabBar::mouseMoveEvent)
             sourceObject->setProperty(TabBar::tabDropped, true);
-            // the tab will be dropped (moved) after the DND is finished
-            QTimer::singleShot(0, sourceObject, [this, sourceObject]() { dropTab(sourceObject); });
+
+            // ensure the source object is still alive when the deferred drop is processed
+            QPointer<QObject> safeSourceObject = sourceObject;
+            QTimer::singleShot(0, safeSourceObject, [this, safeSourceObject]() {
+                if (safeSourceObject) {
+                    dropTab(safeSourceObject);
+                }
+            });
         }
     }
 
@@ -52,25 +58,30 @@ void MainWindow::dropTab(QObject* source) {
         return;
     }
 
-    auto* w = qobject_cast<QWidget*>(source);
-    auto* dragSource = w ? qobject_cast<MainWindow*>(w->window()) : nullptr;
-
-    if (dragSource == this || !dragSource) {  // drop on itself or invalid source
+    auto* widget = qobject_cast<QWidget*>(source);
+    if (!widget) {
         activeViewFrame_->getTabBar()->finishMouseMoveEvent();
         return;
     }
 
-    // first close the tab in the drag window;
-    // then add its page to a new tab in the drop window
+    auto* dragSource = qobject_cast<MainWindow*>(widget->window());
+    if (dragSource == this || !dragSource) {
+        activeViewFrame_->getTabBar()->finishMouseMoveEvent();
+        return;
+    }
+
+    // first close the tab in the drag window; then add its page to a new tab in the drop window
     TabPage* dropPage = dragSource->currentPage();
     if (dropPage) {
-        disconnect(static_cast<QObject*>(dropPage), nullptr, dragSource, nullptr);
+        QObject::disconnect(dropPage, nullptr, dragSource, nullptr);
 
         // release mouse before tab removal because otherwise, the source tabbar
         // might not be updated properly with tab reordering during a fast drag-and-drop
         dragSource->activeViewFrame_->getTabBar()->releaseMouse();
 
-        dragSource->activeViewFrame_->getStackedWidget()->removeWidget(static_cast<QWidget*>(dropPage));
+        auto* pageWidget = static_cast<QWidget*>(dropPage);
+        dragSource->activeViewFrame_->getStackedWidget()->removeWidget(pageWidget);
+
         const int index = addTabWithPage(dropPage, activeViewFrame_);
         activeViewFrame_->getTabBar()->setCurrentIndex(index);
     } else {
@@ -84,10 +95,10 @@ void MainWindow::detachTab() {
     }
 
     auto* app = qobject_cast<Application*>(qApp);
-    Settings* settings = app ? &app->settings() : nullptr;
+    const bool splitViewEnabled = app && app->settings().splitView();
 
     // don't detach a single tab; split view state may have changed elsewhere
-    if (activeViewFrame_->getStackedWidget()->count() == 1 || (settings && settings->splitView())) {
+    if (activeViewFrame_->getStackedWidget()->count() == 1 || splitViewEnabled) {
         activeViewFrame_->getTabBar()->finishMouseMoveEvent();
         return;
     }
@@ -95,10 +106,11 @@ void MainWindow::detachTab() {
     // close the tab and move its page to a new window
     TabPage* dropPage = currentPage();
     if (dropPage) {
-        disconnect(static_cast<QObject*>(dropPage), nullptr, this, nullptr);
+        QObject::disconnect(dropPage, nullptr, this, nullptr);
 
         activeViewFrame_->getTabBar()->releaseMouse();  // as in dropTab()
-        activeViewFrame_->getStackedWidget()->removeWidget(static_cast<QWidget*>(dropPage));
+        auto* pageWidget = static_cast<QWidget*>(dropPage);
+        activeViewFrame_->getStackedWidget()->removeWidget(pageWidget);
 
         auto* newWin = new MainWindow();
         newWin->addTabWithPage(dropPage, newWin->activeViewFrame_);
