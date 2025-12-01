@@ -68,3 +68,29 @@ target_include_directories(pcmanfm-qt-ops-tests PRIVATE
 
 add_test(NAME pcmanfm-qt-ops-tests COMMAND pcmanfm-qt-ops-tests)
 set_tests_properties(pcmanfm-qt-ops-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# Archive extraction tests
+add_executable(pcmanfm-qt-archive-tests
+    archive_extract_test.cpp
+    ../src/core/archive_extract.cpp
+    ../src/core/fs_ops.cpp
+)
+
+target_link_libraries(pcmanfm-qt-archive-tests
+    Qt6::Test
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    ${LIBARCHIVE_LIBRARIES}
+    ${BLAKE3_LIBRARIES}
+)
+
+target_include_directories(pcmanfm-qt-archive-tests PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/pcmanfm
+    ${LIBARCHIVE_INCLUDE_DIRS}
+    ${BLAKE3_INCLUDE_DIRS}
+)
+
+add_test(NAME pcmanfm-qt-archive-tests COMMAND pcmanfm-qt-archive-tests)
+set_tests_properties(pcmanfm-qt-archive-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

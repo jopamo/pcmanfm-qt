@@ -5,7 +5,8 @@
 
 #include "archiveextractjob.h"
 
-#include "../core/archive_writer.h"
+#include "../core/archive_extract.h"
+#include "../core/fs_ops.h"
 
 #include <QFile>
 #include <QtConcurrent>
@@ -42,7 +43,13 @@ void ArchiveExtractJob::start(const QString& archivePath, const QString& destina
             return true;
         };
 
-        const bool ok = ArchiveWriter::extract_tar_zst(archiveNative, destNative, opProgress, cb, err);
+        PCManFM::ArchiveExtract::Options opts;
+        // Use all available cores for filters when libarchive supports it.
+        opts.enableFilterThreads = true;
+        opts.maxFilterThreads = 0;
+
+        const bool ok = PCManFM::ArchiveExtract::extract_archive(archiveNative, destNative, opProgress, cb, err, opts);
+
         Result result;
         result.success = ok;
         result.error = ok ? QString() : QString::fromLocal8Bit(err.message.c_str());

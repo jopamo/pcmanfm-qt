@@ -32,6 +32,7 @@ set(pcmanfm_SRCS
     ../src/backends/qt/qt_foldermodel.cpp
     ../src/core/fs_ops.cpp
     ../src/core/archive_writer.cpp
+    ../src/core/archive_extract.cpp
     ../src/ui/filepropertiesdialog.cpp
     ../src/ui/archivejob.cpp
     ../src/ui/archiveextractjob.cpp

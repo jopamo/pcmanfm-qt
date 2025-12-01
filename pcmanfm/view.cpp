@@ -69,6 +69,40 @@ QHash<QString, ChecksumWindowWidgets>& checksumWindows() {
     return windows;
 }
 
+QString stripArchiveExtension(const QString& fileName) {
+    const QString lower = fileName.toLower();
+    static const QStringList suffixes = {
+        QStringLiteral(".tar.zst"), QStringLiteral(".tar.lz4"), QStringLiteral(".tar.gz"), QStringLiteral(".tar.bz2"),
+        QStringLiteral(".tar.xz"),  QStringLiteral(".tar"),     QStringLiteral(".tzst"),   QStringLiteral(".txz"),
+        QStringLiteral(".tbz2"),    QStringLiteral(".tbz"),     QStringLiteral(".tgz"),    QStringLiteral(".zip"),
+        QStringLiteral(".cpio"),    QStringLiteral(".ar"),      QStringLiteral(".7z"),     QStringLiteral(".iso"),
+        QStringLiteral(".xar"),     QStringLiteral(".rpm"),     QStringLiteral(".deb")};
+
+    for (const QString& suffix : suffixes) {
+        if (lower.endsWith(suffix)) {
+            const int keep = fileName.size() - suffix.size();
+            QString stem = fileName.left(keep);
+            if (stem.isEmpty()) {
+                stem = QStringLiteral("extracted");
+            }
+            return stem;
+        }
+    }
+    return QString();
+}
+
+bool isSupportedArchive(const QString& path, QString* destinationOut) {
+    QFileInfo info(path);
+    const QString stem = stripArchiveExtension(info.fileName());
+    if (stem.isEmpty()) {
+        return false;
+    }
+    if (destinationOut) {
+        *destinationOut = info.absolutePath() + QLatin1Char('/') + stem;
+    }
+    return true;
+}
+
 }  // namespace
 
 void View::removeLibfmArchiverActions(Fm::FileMenu* menu) {
@@ -566,20 +600,15 @@ void View::prepareFileMenu(Fm::FileMenu* menu) {
             const QString pathStr = QString::fromUtf8(localPath.get());
             compressPaths << pathStr;
             if (files.size() == 1 && !fi->isDir() && extractArchivePath.isEmpty()) {
-                if (pathStr.endsWith(QStringLiteral(".tar.zst"), Qt::CaseInsensitive)) {
-                    QFileInfo info(pathStr);
-                    QString stem = info.fileName();
-                    stem.chop(QStringLiteral(".tar.zst").size());
-                    if (stem.isEmpty()) {
-                        stem = QStringLiteral("extracted");
-                    }
+                QString candidateDestination;
+                if (isSupportedArchive(pathStr, &candidateDestination)) {
                     extractArchivePath = pathStr;
-                    extractDestination = info.absolutePath() + QLatin1Char('/') + stem;
+                    extractDestination = candidateDestination;
                 }
             }
         }
         if (files.size() == 1 && extractArchivePath == compressPaths.value(0)) {
-            // Do not offer "Compress" when right-clicking a tar.zst archive itself
+            // Do not offer "Compress" when right-clicking an archive itself
             compressPaths.clear();
         }
     }
