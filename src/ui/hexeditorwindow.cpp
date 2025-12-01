@@ -18,11 +18,16 @@
 #include <QLabel>
 #include <QDockWidget>
 #include <QFormLayout>
+#include <QCryptographicHash>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QPlainTextEdit>
 
 #include <algorithm>
 #include <cctype>
 #include <vector>
 #include <cstring>
+#include <cmath>
 
 namespace PCManFM {
 
@@ -175,6 +180,12 @@ void HexEditorWindow::setupUi() {
     connect(nextModifiedAction_, &QAction::triggered, this, [this] { jumpToModified(true); });
     prevModifiedAction_ = toolbar->addAction(QIcon::fromTheme(QStringLiteral("go-previous")), tr("Previous Modified"));
     connect(prevModifiedAction_, &QAction::triggered, this, [this] { jumpToModified(false); });
+
+    checksumAction_ = toolbar->addAction(QIcon::fromTheme(QStringLiteral("document-open-recent")), tr("Checksum…"));
+    connect(checksumAction_, &QAction::triggered, this, [this] { computeChecksums(true); });
+
+    statsAction_ = toolbar->addAction(QIcon::fromTheme(QStringLiteral("view-statistics")), tr("Byte Stats…"));
+    connect(statsAction_, &QAction::triggered, this, [this] { computeByteStats(true); });
 
     insertToggleAction_ = toolbar->addAction(QIcon::fromTheme(QStringLiteral("insert-text")), tr("Insert mode"));
     insertToggleAction_->setCheckable(true);
@@ -335,6 +346,12 @@ void HexEditorWindow::updateActionStates(bool hasSelection) {
     }
     if (prevModifiedAction_) {
         prevModifiedAction_->setEnabled(hasDoc);
+    }
+    if (checksumAction_) {
+        checksumAction_->setEnabled(hasDoc);
+    }
+    if (statsAction_) {
+        statsAction_->setEnabled(hasDoc);
     }
 }
 
@@ -656,6 +673,157 @@ void HexEditorWindow::jumpToModified(bool forward) {
     view_->setSelection(found, 1);
     view_->setCursorOffset(found, true);
     statusBar()->showMessage(tr("Jumped to modified byte at 0x%1").arg(found, 0, 16));
+}
+
+bool HexEditorWindow::iterateRange(std::uint64_t start,
+                                   std::uint64_t length,
+                                   const std::function<bool(const QByteArray&)>& consumer,
+                                   QString& errorOut) {
+    if (!doc_) {
+        errorOut = tr("No document loaded.");
+        return false;
+    }
+    constexpr std::uint64_t kChunk = 1 * 1024 * 1024;
+    std::uint64_t remaining = length;
+    std::uint64_t pos = start;
+    while (remaining > 0) {
+        const std::uint64_t chunk = std::min<std::uint64_t>(remaining, kChunk);
+        QByteArray data;
+        if (!doc_->readBytes(pos, chunk, data, errorOut)) {
+            return false;
+        }
+        if (!consumer(data)) {
+            return false;
+        }
+        remaining -= chunk;
+        pos += chunk;
+    }
+    return true;
+}
+
+void HexEditorWindow::computeChecksums(bool selectionOnly) {
+    if (!doc_) {
+        return;
+    }
+    auto sel = view_ ? view_->selection() : std::nullopt;
+    std::uint64_t start = 0;
+    std::uint64_t length = doc_->size();
+    if (selectionOnly && sel) {
+        start = sel->first;
+        length = sel->second;
+    }
+    if (length == 0) {
+        QMessageBox::information(this, tr("Checksum"), tr("Nothing to hash."));
+        return;
+    }
+
+    QCryptographicHash sha256(QCryptographicHash::Sha256);
+    quint32 crc = 0xFFFFFFFFu;
+
+    QString error;
+    const bool ok = iterateRange(
+        start, length,
+        [&](const QByteArray& data) {
+            sha256.addData(data);
+            for (unsigned char b : data) {
+                crc ^= b;
+                for (int i = 0; i < 8; ++i) {
+                    const bool lsb = crc & 1u;
+                    crc >>= 1;
+                    if (lsb) {
+                        crc ^= 0xEDB88320u;
+                    }
+                }
+            }
+            return true;
+        },
+        error);
+    if (!ok) {
+        QMessageBox::warning(this, tr("Checksum"), error);
+        return;
+    }
+
+    crc ^= 0xFFFFFFFFu;
+    const QByteArray shaBytes = sha256.result().toHex();
+    const QString message = tr("Range: 0x%1–0x%2 (%3 bytes)\nCRC32: %4\nSHA-256: %5")
+                                .arg(start, 0, 16)
+                                .arg(start + length, 0, 16)
+                                .arg(length)
+                                .arg(QStringLiteral("%1").arg(crc, 8, 16, QLatin1Char('0')).toUpper())
+                                .arg(QString::fromLatin1(shaBytes));
+    QMessageBox::information(this, tr("Checksum"), message);
+}
+
+void HexEditorWindow::computeByteStats(bool selectionOnly) {
+    if (!doc_) {
+        return;
+    }
+    auto sel = view_ ? view_->selection() : std::nullopt;
+    std::uint64_t start = 0;
+    std::uint64_t length = doc_->size();
+    if (selectionOnly && sel) {
+        start = sel->first;
+        length = sel->second;
+    }
+    if (length == 0) {
+        QMessageBox::information(this, tr("Byte stats"), tr("Nothing to analyze."));
+        return;
+    }
+
+    std::array<std::uint64_t, 256> counts{};
+    QString error;
+    const bool ok = iterateRange(
+        start, length,
+        [&](const QByteArray& data) {
+            for (unsigned char b : data) {
+                counts[b]++;
+            }
+            return true;
+        },
+        error);
+    if (!ok) {
+        QMessageBox::warning(this, tr("Byte stats"), error);
+        return;
+    }
+
+    double entropy = 0.0;
+    for (std::uint64_t c : counts) {
+        if (c == 0) {
+            continue;
+        }
+        const double p = static_cast<double>(c) / static_cast<double>(length);
+        entropy -= p * std::log2(p);
+    }
+
+    QStringList lines;
+    lines << tr("Range: 0x%1–0x%2 (%3 bytes)").arg(start, 0, 16).arg(start + length, 0, 16).arg(length);
+    lines << tr("Entropy: %1 bits/byte").arg(entropy, 0, 'f', 4);
+    lines << QString();
+    for (int i = 0; i < 256; ++i) {
+        const std::uint64_t c = counts[static_cast<std::size_t>(i)];
+        if (c == 0) {
+            continue;
+        }
+        const double p = static_cast<double>(c) / static_cast<double>(length);
+        lines << QStringLiteral("%1: %2 ( %3% )")
+                     .arg(QStringLiteral("%1").arg(i, 2, 16, QLatin1Char('0')).toUpper())
+                     .arg(c)
+                     .arg(p * 100.0, 0, 'f', 4);
+    }
+
+    auto* dialog = new QDialog(this);
+    dialog->setWindowTitle(tr("Byte statistics"));
+    auto* layout = new QVBoxLayout(dialog);
+    auto* text = new QPlainTextEdit(dialog);
+    text->setReadOnly(true);
+    text->setPlainText(lines.join(QStringLiteral("\n")));
+    layout->addWidget(text);
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
+    connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+    dialog->setLayout(layout);
+    dialog->resize(480, 640);
+    dialog->show();
 }
 
 void HexEditorWindow::updateInspector(std::uint64_t offset) {

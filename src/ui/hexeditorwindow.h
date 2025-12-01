@@ -48,6 +48,12 @@ class HexEditorWindow : public QMainWindow {
     QByteArray promptForReplace(bool& okOut);
     void goToOffset();
     void updateInspector(std::uint64_t offset);
+    void computeChecksums(bool selectionOnly);
+    void computeByteStats(bool selectionOnly);
+    bool iterateRange(std::uint64_t start,
+                      std::uint64_t length,
+                      const std::function<bool(const QByteArray&)>& consumer,
+                      QString& errorOut);
 
     std::unique_ptr<HexDocument> doc_;
     QPointer<HexEditorView> view_;
@@ -73,6 +79,8 @@ class HexEditorWindow : public QMainWindow {
     QAction* insertToggleAction_ = nullptr;
     QAction* nextModifiedAction_ = nullptr;
     QAction* prevModifiedAction_ = nullptr;
+    QAction* checksumAction_ = nullptr;
+    QAction* statsAction_ = nullptr;
 
     QByteArray lastSearch_;
     QByteArray lastReplace_;
