@@ -27,81 +27,69 @@
 namespace PCManFM {
 
 class BulkRenameDialog : public QDialog {
-Q_OBJECT
+    Q_OBJECT
 
-public:
+   public:
     explicit BulkRenameDialog(QWidget* parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
 
     // renaming
-    QString getBaseName() const {
-        return ui.lineEdit->text();
-    }
-    int getStart() const {
-        return ui.spinBox->value();
-    }
-    bool getZeroPadding() const {
-        return ui.zeroBox->isChecked();
-    }
-    bool getRespectLocale() const {
-        return ui.localeBox->isChecked();
-    }
+    QString getBaseName() const { return ui.lineEdit->text(); }
+    int getStart() const { return ui.spinBox->value(); }
+    bool getZeroPadding() const { return ui.zeroBox->isChecked(); }
+    bool getRespectLocale() const { return ui.localeBox->isChecked(); }
 
     // replacement
-    bool getReplace() const {
-        return ui.replaceGroupBox->isChecked();
-    }
-    QString getFindStr() const {
-        return ui.findLineEdit->text();
-    }
-    QString getReplaceStr() const {
-        return ui.replaceLineEdit->text();
-    }
-    Qt::CaseSensitivity getCase() const {
-        return ui.caseBox->isChecked() ? Qt::CaseSensitive : Qt::CaseInsensitive;
-    }
-    bool getRegex() const {
-        return ui.regexBox->isChecked();
-    }
+    bool getReplace() const { return ui.replaceGroupBox->isChecked(); }
+    QString getFindStr() const { return ui.findLineEdit->text(); }
+    QString getReplaceStr() const { return ui.replaceLineEdit->text(); }
+    Qt::CaseSensitivity getCase() const { return ui.caseBox->isChecked() ? Qt::CaseSensitive : Qt::CaseInsensitive; }
+    bool getRegex() const { return ui.regexBox->isChecked(); }
 
     // case change
-    bool getCaseChange() const {
-        return ui.caseGroupBox->isChecked();
-    }
-    bool getUpperCase() const {
-        return ui.upperCaseButton->isChecked();
-    }
+    bool getCaseChange() const { return ui.caseGroupBox->isChecked(); }
+    bool getUpperCase() const { return ui.upperCaseButton->isChecked(); }
 
     void setState(const QString& baseName,
-                  const QString& findStr, const QString& replaceStr,
-                  bool replacement, bool caseChange,
-                  bool zeroPadding, bool respectLocale, bool regex, bool toUpperCase,
-                  int start, Qt::CaseSensitivity cs);
+                  const QString& findStr,
+                  const QString& replaceStr,
+                  bool replacement,
+                  bool caseChange,
+                  bool zeroPadding,
+                  bool respectLocale,
+                  bool regex,
+                  bool toUpperCase,
+                  int start,
+                  Qt::CaseSensitivity cs);
 
-protected:
+   protected:
     virtual void showEvent(QShowEvent* event) override;
 
-private:
+   private:
     Ui::BulkRenameDialog ui;
 };
 
 class BulkRenamer {
-public:
+   public:
     BulkRenamer(const Fm::FileInfoList& files, QWidget* parent = nullptr);
     ~BulkRenamer();
 
-private:
+   private:
     bool rename(const Fm::FileInfoList& files,
-                QString& baseName, const QLocale& locale,
-                int start, bool zeroPadding, bool respectLocale,
+                QString& baseName,
+                const QLocale& locale,
+                int start,
+                bool zeroPadding,
+                bool respectLocale,
                 QWidget* parent);
     bool renameByReplacing(const Fm::FileInfoList& files,
-                           const QString& findStr, const QString& replaceStr,
-                           Qt::CaseSensitivity cs, bool regex,
+                           const QString& findStr,
+                           const QString& replaceStr,
+                           Qt::CaseSensitivity cs,
+                           bool regex,
                            QWidget* parent);
-    bool renameByChangingCase(const Fm::FileInfoList& files, const QLocale& locale,
-                              bool toUpperCase, QWidget* parent);
+    bool renameByChangingCase(const Fm::FileInfoList& files, const QLocale& locale, bool toUpperCase, QWidget* parent);
 };
 
-}
+}  // namespace PCManFM
 
-#endif // PCMANFM_BULKRENAME_H
+#endif  // PCMANFM_BULKRENAME_H

@@ -24,7 +24,9 @@ namespace PCManFM {
 namespace {
 
 // Helper to access Application settings concisely
-Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+Settings& appSettings() {
+    return static_cast<Application*>(qApp)->settings();
+}
 
 }  // namespace
 
@@ -44,7 +46,8 @@ void MainWindow::addViewFrame(const Fm::FilePath& path) {
 
     if (ui.viewSplitter->count() == 1) {
         activeViewFrame_ = viewFrame;
-    } else {
+    }
+    else {
         // Equalize sizes after the event loop processes the new widget addition
         QTimer::singleShot(0, this, [this] {
             const int count = ui.viewSplitter->count();
@@ -115,7 +118,8 @@ int MainWindow::addTabWithPage(TabPage* page, ViewFrame* viewFrame, Fm::FilePath
             setWindowState((windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
             show();
         }
-    } else if (TabPage* tabPage = currentPage()) {
+    }
+    else if (TabPage* tabPage = currentPage()) {
         // Keep focus on the current page if we aren't switching
         tabPage->folderView()->childView()->setFocus();
     }
@@ -157,10 +161,12 @@ void MainWindow::addTab(Fm::FilePath path) {
                 app->settings().setSplitViewTabsNum(0);
                 splitTabsNum_ = -1;
                 addTab(path, activeViewFrame_);
-            } else if (splitTabsNum_ > 0) {
+            }
+            else if (splitTabsNum_ > 0) {
                 --splitTabsNum_;
                 addTab(path, firstFrame);
-            } else {
+            }
+            else {
                 addTab(path, secondFrame);
                 // On reaching the single tab of the second frame, remove it after adding a tab
                 // to avoid keeping the default empty tab open.
@@ -190,7 +196,8 @@ void MainWindow::closeTab(int index, ViewFrame* viewFrame) {
 
 void MainWindow::onTabBarCloseRequested(int index) {
     auto* tabBar = qobject_cast<TabBar*>(sender());
-    if (!tabBar) return;
+    if (!tabBar)
+        return;
 
     if (auto* viewFrame = qobject_cast<ViewFrame*>(tabBar->parentWidget())) {
         closeTab(index, viewFrame);
@@ -199,22 +206,26 @@ void MainWindow::onTabBarCloseRequested(int index) {
 
 void MainWindow::onTabBarCurrentChanged(int index) {
     auto* tabBar = qobject_cast<TabBar*>(sender());
-    if (!tabBar) return;
+    if (!tabBar)
+        return;
 
     auto* viewFrame = qobject_cast<ViewFrame*>(tabBar->parentWidget());
-    if (!viewFrame) return;
+    if (!viewFrame)
+        return;
 
     auto* stackedWidget = viewFrame->getStackedWidget();
     stackedWidget->setCurrentIndex(index);
 
     if (viewFrame == activeViewFrame_) {
         updateUIForCurrentPage();
-    } else {
+    }
+    else {
         // If updating a background frame, strictly update its location bar, not the main window UI
         if (TabPage* page = currentPage(viewFrame)) {
             if (auto* pathBar = qobject_cast<Fm::PathBar*>(viewFrame->getTopBar())) {
                 pathBar->setPath(page->path());
-            } else if (auto* pathEntry = qobject_cast<Fm::PathEdit*>(viewFrame->getTopBar())) {
+            }
+            else if (auto* pathEntry = qobject_cast<Fm::PathEdit*>(viewFrame->getTopBar())) {
                 pathEntry->setText(page->pathName());
             }
         }
@@ -223,14 +234,17 @@ void MainWindow::onTabBarCurrentChanged(int index) {
 
 void MainWindow::onTabBarTabMoved(int from, int to) {
     auto* tabBar = qobject_cast<TabBar*>(sender());
-    if (!tabBar) return;
+    if (!tabBar)
+        return;
 
     auto* viewFrame = qobject_cast<ViewFrame*>(tabBar->parentWidget());
-    if (!viewFrame) return;
+    if (!viewFrame)
+        return;
 
     auto* stackedWidget = viewFrame->getStackedWidget();
     QWidget* page = stackedWidget->widget(from);
-    if (!page) return;
+    if (!page)
+        return;
 
     // block signals to avoid onStackedWidgetWidgetRemoved() being called while reshuffling pages
     const bool previousBlockState = stackedWidget->blockSignals(true);
@@ -242,10 +256,12 @@ void MainWindow::onTabBarTabMoved(int from, int to) {
 
 void MainWindow::onStackedWidgetWidgetRemoved(int index) {
     auto* sw = qobject_cast<QStackedWidget*>(sender());
-    if (!sw) return;
+    if (!sw)
+        return;
 
     auto* viewFrame = qobject_cast<ViewFrame*>(sw->parentWidget());
-    if (!viewFrame) return;
+    if (!viewFrame)
+        return;
 
     auto* tabBar = viewFrame->getTabBar();
     tabBar->removeTab(index);
@@ -258,7 +274,8 @@ void MainWindow::onStackedWidgetWidgetRemoved(int index) {
     // Use deleteLater to ensure all pending events for the frame are processed
     if (!splitView_) {
         deleteLater();  // destroy the whole window
-    } else {
+    }
+    else {
         // In split mode, if the last tab of a view frame is closed,
         // remove that view frame and revert to simple mode.
 
@@ -289,17 +306,20 @@ void MainWindow::onStackedWidgetWidgetRemoved(int index) {
 }
 
 ViewFrame* MainWindow::viewFrameForTabPage(TabPage* page) {
-    if (!page) return nullptr;
+    if (!page)
+        return nullptr;
 
     auto* sw = qobject_cast<QStackedWidget*>(page->parentWidget());
-    if (!sw) return nullptr;
+    if (!sw)
+        return nullptr;
 
     return qobject_cast<ViewFrame*>(sw->parentWidget());
 }
 
 void MainWindow::setTabIcon(TabPage* tabPage) {
     ViewFrame* viewFrame = viewFrameForTabPage(tabPage);
-    if (!viewFrame) return;
+    if (!viewFrame)
+        return;
 
     const bool isCustomized = tabPage->hasCustomizedView() || tabPage->hasInheritedCustomizedView();
     auto* tabBar = viewFrame->getTabBar();

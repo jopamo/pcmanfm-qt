@@ -27,7 +27,9 @@ namespace PCManFM {
 namespace {
 
 // Helper to access Application settings concisely
-Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+Settings& appSettings() {
+    return static_cast<Application*>(qApp)->settings();
+}
 
 }  // namespace
 
@@ -81,26 +83,30 @@ void View::onFileClicked(int type, const std::shared_ptr<const Fm::FileInfo>& fi
 
 void View::onNewWindow() {
     auto* menu = qobject_cast<Fm::FileMenu*>(sender()->parent());
-    if (!menu) return;
+    if (!menu)
+        return;
 
     auto files = menu->files();
 
     if (files.size() == 1 && !files.front()->isDir()) {
         openFolderAndSelectFile(files.front());
-    } else {
+    }
+    else {
         static_cast<Application*>(qApp)->openFolders(std::move(files));
     }
 }
 
 void View::onNewTab() {
     auto* menu = qobject_cast<Fm::FileMenu*>(sender()->parent());
-    if (!menu) return;
+    if (!menu)
+        return;
 
     auto files = menu->files();
 
     if (files.size() == 1 && !files.front()->isDir()) {
         openFolderAndSelectFile(files.front(), true);
-    } else {
+    }
+    else {
         launchFiles(std::move(files), true);
     }
 }
@@ -108,7 +114,8 @@ void View::onNewTab() {
 void View::onOpenInTerminal() {
     auto* app = static_cast<Application*>(qApp);
     auto* menu = qobject_cast<Fm::FileMenu*>(sender()->parent());
-    if (!menu) return;
+    if (!menu)
+        return;
 
     auto files = menu->files();
     for (auto& file : files) {
@@ -133,7 +140,8 @@ void View::prepareFileMenu(Fm::FileMenu* menu) {
     for (auto& fi : files) {
         if (!fi->isDir()) {
             allDirectory = false;
-        } else if (!fi->isNative()) {
+        }
+        else if (!fi->isNative()) {
             allNative = false;
         }
     }
@@ -154,7 +162,8 @@ void View::prepareFileMenu(Fm::FileMenu* menu) {
             connect(action, &QAction::triggered, this, &View::onOpenInTerminal);
             menu->insertAction(menu->separator1(), action);
         }
-    } else {
+    }
+    else {
         if (menu->pasteAction()) {
             menu->pasteAction()->setVisible(false);
         }

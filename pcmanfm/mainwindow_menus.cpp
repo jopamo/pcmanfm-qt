@@ -21,7 +21,9 @@ namespace PCManFM {
 namespace {
 
 // Helper to access Application settings concisely
-Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+Settings& appSettings() {
+    return static_cast<Application*>(qApp)->settings();
+}
 
 }  // namespace
 
@@ -89,7 +91,8 @@ void MainWindow::updateRecenMenu() {
             actions.at(i)->setIcon(icon);
             actions.at(i)->setData(recentFiles.at(i));
             actions.at(i)->setVisible(true);
-        } else {
+        }
+        else {
             actions.at(i)->setText(QString());
             actions.at(i)->setIcon(QIcon());
             actions.at(i)->setData(QVariant());
@@ -210,7 +213,8 @@ void MainWindow::updateViewMenuForCurrentPage() {
 
             if (targetAction && groupActions.contains(targetAction)) {
                 targetAction->setChecked(true);
-            } else {
+            }
+            else {
                 for (auto* a : groupActions) {
                     a->setChecked(false);
                 }
@@ -223,7 +227,8 @@ void MainWindow::updateViewMenuForCurrentPage() {
 
         if (tabPage->sortOrder() == Qt::AscendingOrder) {
             ui.actionAscending->setChecked(true);
-        } else {
+        }
+        else {
             ui.actionDescending->setChecked(true);
         }
 
@@ -290,7 +295,8 @@ void MainWindow::updateUIForCurrentPage(bool setFocus) {
                     pathEdit = qobject_cast<Fm::PathEdit*>(activeViewFrame_->getTopBar());
                 }
             }
-        } else {
+        }
+        else {
             // In single view, use the member variables if available
             pathBar = pathBar_;
             pathEdit = pathEntry_;
@@ -298,7 +304,8 @@ void MainWindow::updateUIForCurrentPage(bool setFocus) {
 
         if (pathBar) {
             pathBar->setPath(tabPage->path());
-        } else if (pathEdit) {
+        }
+        else if (pathEdit) {
             pathEdit->setText(tabPage->pathName());
         }
 

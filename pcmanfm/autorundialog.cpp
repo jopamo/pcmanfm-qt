@@ -22,7 +22,9 @@ namespace PCManFM {
 namespace {
 
 // Helper to access Application settings concisely
-Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+Settings& appSettings() {
+    return static_cast<Application*>(qApp)->settings();
+}
 
 }  // namespace
 
@@ -105,7 +107,8 @@ void AutoRunDialog::accept() {
     void* p = item->data(Qt::UserRole).value<void*>();
     if (p) {
         launchSelectedApp(static_cast<GAppInfo*>(p), gf);
-    } else {
+    }
+    else {
         openInFileManager(gf);
     }
 
@@ -114,7 +117,8 @@ void AutoRunDialog::accept() {
 }
 
 void AutoRunDialog::launchSelectedApp(GAppInfo* app, GFile* mountRoot) {
-    if (!app || !mountRoot) return;
+    if (!app || !mountRoot)
+        return;
 
     GList* filelist = g_list_prepend(nullptr, mountRoot);
     GError* error = nullptr;
@@ -129,7 +133,8 @@ void AutoRunDialog::launchSelectedApp(GAppInfo* app, GFile* mountRoot) {
 }
 
 void AutoRunDialog::openInFileManager(GFile* mountRoot) {
-    if (!mountRoot) return;
+    if (!mountRoot)
+        return;
 
     Settings& settings = appSettings();
 
@@ -151,7 +156,8 @@ void AutoRunDialog::openInFileManager(GFile* mountRoot) {
 void AutoRunDialog::onContentTypeFinished(GMount* mount, GAsyncResult* res, AutoRunDialog* pThis) {
     Q_UNUSED(mount);
 
-    if (!pThis) return;
+    if (!pThis)
+        return;
 
     // once the async query is complete we no longer need the cancellable
     if (pThis->cancellable) {
@@ -184,13 +190,15 @@ void AutoRunDialog::onContentTypeFinished(GMount* mount, GAsyncResult* res, Auto
                 GAppInfo* app = G_APP_INFO(l->data);
 
                 // Avoid duplicates or invalid apps
-                if (!app) continue;
+                if (!app)
+                    continue;
 
                 GIcon* gicon = g_app_info_get_icon(app);
                 QIcon icon;
                 if (gicon) {
                     icon = Fm::IconInfo::fromGIcon(gicon)->qicon();
-                } else {
+                }
+                else {
                     icon = QIcon::fromTheme(QStringLiteral("application-x-executable"));
                 }
 
@@ -215,7 +223,8 @@ void AutoRunDialog::onContentTypeFinished(GMount* mount, GAsyncResult* res, Auto
     if (desc) {
         pThis->ui.mediumType->setText(QString::fromUtf8(desc));
         g_free(desc);
-    } else {
+    }
+    else {
         pThis->ui.mediumType->setText(tr("Removable Disk"));
     }
 

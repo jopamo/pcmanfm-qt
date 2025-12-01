@@ -87,7 +87,8 @@ void MainWindow::dropTab(QObject* source) {
 
         const int index = addTabWithPage(dropPage, activeViewFrame_);
         activeViewFrame_->getTabBar()->setCurrentIndex(index);
-    } else {
+    }
+    else {
         activeViewFrame_->getTabBar()->finishMouseMoveEvent();  // impossible
     }
 }
@@ -118,7 +119,8 @@ void MainWindow::detachTab() {
         auto* newWin = new MainWindow();
         newWin->addTabWithPage(dropPage, newWin->activeViewFrame_);
         newWin->show();
-    } else {
+    }
+    else {
         activeViewFrame_->getTabBar()->finishMouseMoveEvent();  // impossible
     }
 }

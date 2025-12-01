@@ -34,7 +34,9 @@ void MainWindow::loadBookmarksMenu() {
     }
 }
 
-void MainWindow::onBookmarksChanged() { loadBookmarksMenu(); }
+void MainWindow::onBookmarksChanged() {
+    loadBookmarksMenu();
+}
 
 void MainWindow::onBookmarkActionTriggered() {
     const auto* action = qobject_cast<QAction*>(sender());

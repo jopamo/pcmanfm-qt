@@ -41,7 +41,8 @@ void ViewFrame::createTopBar(bool usePathButtons) {
                 topBar_ = new Fm::PathBar();
                 vBox->insertWidget(0, topBar_);
             }
-        } else {
+        }
+        else {
             if (qobject_cast<Fm::PathBar*>(topBar_)) {
                 delete topBar_;
                 topBar_ = nullptr;

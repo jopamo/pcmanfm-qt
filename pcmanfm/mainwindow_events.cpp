@@ -21,7 +21,9 @@ namespace PCManFM {
 namespace {
 
 // Helper to access Application settings concisely
-Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+Settings& appSettings() {
+    return static_cast<Application*>(qApp)->settings();
+}
 
 // Helper to calculate the "dimmed" palette for inactive view frames.
 // This visually distinguishes the active split pane from the inactive one.
@@ -71,7 +73,8 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
     if (event->type() == QEvent::FocusIn) {
         handleFocusIn(watchedWidget);
         // Fall through to base class processing is intended for FocusIn
-    } else if (event->type() == QEvent::KeyPress) {
+    }
+    else if (event->type() == QEvent::KeyPress) {
         if (handleTabKey(static_cast<QKeyEvent*>(event), watchedWidget)) {
             return true;  // Event consumed
         }
@@ -83,7 +86,8 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
 void MainWindow::handleFocusIn(QWidget* watchedWidget) {
     for (int i = 0; i < ui.viewSplitter->count(); ++i) {
         auto* viewFrame = qobject_cast<ViewFrame*>(ui.viewSplitter->widget(i));
-        if (!viewFrame) continue;
+        if (!viewFrame)
+            continue;
 
         if (viewFrame->isAncestorOf(watchedWidget)) {
             // This is the active frame
@@ -96,7 +100,8 @@ void MainWindow::handleFocusIn(QWidget* watchedWidget) {
             if (viewFrame->palette().color(QPalette::Base) != qApp->palette().color(QPalette::Base)) {
                 viewFrame->setPalette(qApp->palette());
             }
-        } else {
+        }
+        else {
             // This is an inactive frame
             // If it currently looks "active" (standard palette), dim it.
             if (viewFrame->palette().color(QPalette::Base) == qApp->palette().color(QPalette::Base)) {
@@ -176,7 +181,8 @@ void MainWindow::closeEvent(QCloseEvent* event) {
 
         for (int i = 0; i < ui.viewSplitter->count(); ++i) {
             auto* viewFrame = qobject_cast<ViewFrame*>(ui.viewSplitter->widget(i));
-            if (!viewFrame) continue;
+            if (!viewFrame)
+                continue;
 
             auto* stack = viewFrame->getStackedWidget();
             const int n = stack->count();

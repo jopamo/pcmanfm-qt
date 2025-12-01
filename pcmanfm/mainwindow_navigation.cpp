@@ -17,7 +17,9 @@ namespace PCManFM {
 namespace {
 
 // Helper to access Application settings concisely
-Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+Settings& appSettings() {
+    return static_cast<Application*>(qApp)->settings();
+}
 
 }  // namespace
 
@@ -36,11 +38,13 @@ void MainWindow::chdir(Fm::FilePath path, ViewFrame* viewFrame) {
 
             if (viewFrame == activeViewFrame_) {
                 updateUIForCurrentPage();
-            } else {
+            }
+            else {
                 // Update background view frames' location bar
                 if (auto* pathBar = qobject_cast<Fm::PathBar*>(viewFrame->getTopBar())) {
                     pathBar->setPath(page->path());
-                } else if (auto* pathEntry = qobject_cast<Fm::PathEdit*>(viewFrame->getTopBar())) {
+                }
+                else if (auto* pathEntry = qobject_cast<Fm::PathEdit*>(viewFrame->getTopBar())) {
                     pathEntry->setText(page->pathName());
                 }
             }
@@ -78,7 +82,9 @@ void MainWindow::on_actionGoForward_triggered() {
     });
 }
 
-void MainWindow::on_actionHome_triggered() { chdir(Fm::FilePath::homeDir()); }
+void MainWindow::on_actionHome_triggered() {
+    chdir(Fm::FilePath::homeDir());
+}
 
 void MainWindow::on_actionReload_triggered() {
     TabPage* page = currentPage();
@@ -94,15 +100,25 @@ void MainWindow::on_actionReload_triggered() {
     }
 }
 
-void MainWindow::on_actionConnectToServer_triggered() { static_cast<Application*>(qApp)->connectToServer(); }
+void MainWindow::on_actionConnectToServer_triggered() {
+    static_cast<Application*>(qApp)->connectToServer();
+}
 
-void MainWindow::on_actionComputer_triggered() { chdir(Fm::FilePath::fromUri("computer:///")); }
+void MainWindow::on_actionComputer_triggered() {
+    chdir(Fm::FilePath::fromUri("computer:///"));
+}
 
-void MainWindow::on_actionApplications_triggered() { chdir(Fm::FilePath::fromUri("menu://applications/")); }
+void MainWindow::on_actionApplications_triggered() {
+    chdir(Fm::FilePath::fromUri("menu://applications/"));
+}
 
-void MainWindow::on_actionTrash_triggered() { chdir(Fm::FilePath::fromUri("trash:///")); }
+void MainWindow::on_actionTrash_triggered() {
+    chdir(Fm::FilePath::fromUri("trash:///"));
+}
 
-void MainWindow::on_actionNetwork_triggered() { chdir(Fm::FilePath::fromUri("network:///")); }
+void MainWindow::on_actionNetwork_triggered() {
+    chdir(Fm::FilePath::fromUri("network:///"));
+}
 
 void MainWindow::on_actionDesktop_triggered() {
     const QString desktop = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
@@ -143,7 +159,8 @@ void MainWindow::on_actionOpenAsRoot_triggered() {
         const int substPos = suCommand.indexOf("%s");
         if (substPos != -1) {
             suCommand.replace(substPos, 2, programCommand);
-        } else {
+        }
+        else {
             suCommand += ' ' + programCommand;
         }
 
@@ -165,7 +182,8 @@ void MainWindow::on_actionOpenAsRoot_triggered() {
 
             g_list_free(uris);
         }
-    } else {
+    }
+    else {
         // Show error and open preferences
         QMessageBox::critical(this, tr("Error"), tr("Switch user command is not set"));
         app->preferences(QStringLiteral("advanced"));
@@ -190,7 +208,8 @@ void MainWindow::on_actionFindFiles_triggered() {
             if (file->isDir()) {
                 if (file->isNative()) {
                     paths.append(QString::fromStdString(file->path().localPath().get()));
-                } else {
+                }
+                else {
                     paths.append(QString::fromStdString(file->path().toString().get()));
                 }
             }

@@ -29,7 +29,9 @@ namespace PCManFM {
 namespace {
 
 // Helper to access Application settings concisely
-Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+Settings& appSettings() {
+    return static_cast<Application*>(qApp)->settings();
+}
 
 // Replaces the GLib GKeyFile implementation with native Qt QSettings
 void findIconThemesInDir(QHash<QString, QString>& iconThemes, const QString& dirName) {
@@ -118,10 +120,11 @@ void PreferencesDialog::initIconThemes(Settings& settings) {
 
         // select current fallback theme if present
         int index = ui.iconTheme->findData(settings.fallbackIconThemeName());
-        if (index == -1) index = 0;  // Default to first if not found
+        if (index == -1)
+            index = 0;  // Default to first if not found
         ui.iconTheme->setCurrentIndex(index);
-
-    } else {
+    }
+    else {
         // icon theme is driven by the environment, hiding the manual override
         ui.iconThemeLabel->hide();
         ui.iconTheme->hide();
@@ -215,7 +218,8 @@ void PreferencesDialog::initBehaviorPage(Settings& settings) {
 
     if (settings.supportTrash()) {
         ui.useTrash->setChecked(settings.useTrash());
-    } else {
+    }
+    else {
         ui.useTrash->hide();
     }
 
@@ -249,7 +253,8 @@ void PreferencesDialog::initVolumePage(Settings& settings) {
 
     if (settings.closeOnUnmount()) {
         ui.closeOnUnmount->setChecked(true);
-    } else {
+    }
+    else {
         ui.goHomeOnUnmount->setChecked(true);
     }
 }
@@ -290,7 +295,8 @@ void PreferencesDialog::terminalChanged(int index) {
         ui.terminalExec->setText(termList.value(QStringLiteral("open_arg")).toString());
         ui.terminalCustom->setText(termList.value(QStringLiteral("custom_args")).toString());
         termList.endGroup();
-    } else {
+    }
+    else {
         ui.terminalExec->clear();
         ui.terminalCustom->clear();
     }
@@ -482,7 +488,8 @@ void PreferencesDialog::applyTerminal(Settings& settings) {
             termList.setValue(QStringLiteral("open_arg"), ui.terminalExec->text());
             termList.setValue(QStringLiteral("custom_args"), ui.terminalCustom->text());
             termList.endGroup();
-        } else {
+        }
+        else {
             if (termList.childGroups().contains(term)) {
                 termList.remove(term);
             }
@@ -545,7 +552,8 @@ void PreferencesDialog::lockMargins(bool lock) {
     if (lock) {
         ui.vMargin->setValue(ui.hMargin->value());
         connect(ui.hMargin, &QSpinBox::valueChanged, ui.vMargin, &QSpinBox::setValue);
-    } else {
+    }
+    else {
         disconnect(ui.hMargin, &QSpinBox::valueChanged, ui.vMargin, &QSpinBox::setValue);
     }
 }
@@ -553,7 +561,8 @@ void PreferencesDialog::lockMargins(bool lock) {
 void PreferencesDialog::restartWarning(bool warn) {
     if (warn) {
         ++warningCounter_;
-    } else {
+    }
+    else {
         --warningCounter_;
     }
     ui.warningLabel->setVisible(warningCounter_ > 0);

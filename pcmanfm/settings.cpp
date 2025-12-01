@@ -451,7 +451,8 @@ void Settings::addRecentFile(const QString& file) {
     if (recentFilesNumber_ > 0) {
         recentFiles_.removeAll(file);
         recentFiles_.prepend(file);
-        while (recentFiles_.size() > recentFilesNumber_) recentFiles_.removeLast();
+        while (recentFiles_.size() > recentFilesNumber_)
+            recentFiles_.removeLast();
     }
 }
 
@@ -493,7 +494,8 @@ void Settings::setMaxSearchHistory(int max) {
     if (maxSearchHistory_ == 0) {
         namePatterns_.clear();
         contentPatterns_.clear();
-    } else {
+    }
+    else {
         while (namePatterns_.size() > maxSearchHistory_) {
             namePatterns_.removeLast();
         }
@@ -648,9 +650,11 @@ static const char* bookmarkOpenMethodToString(OpenDirTargetType value) {
 static OpenDirTargetType bookmarkOpenMethodFromString(const QString str) {
     if (str == QStringLiteral("new_tab")) {
         return OpenInNewTab;
-    } else if (str == QStringLiteral("new_window")) {
+    }
+    else if (str == QStringLiteral("new_window")) {
         return OpenInNewWindow;
-    } else if (str == QStringLiteral("last_window")) {
+    }
+    else if (str == QStringLiteral("last_window")) {
         return OpenInLastActiveWindow;
     }
     return OpenInCurrentTab;
@@ -680,13 +684,17 @@ Fm::FolderView::ViewMode viewModeFromString(const QString str) {
     Fm::FolderView::ViewMode ret;
     if (str == QLatin1String("icon")) {
         ret = Fm::FolderView::IconMode;
-    } else if (str == QLatin1String("compact")) {
+    }
+    else if (str == QLatin1String("compact")) {
         ret = Fm::FolderView::CompactMode;
-    } else if (str == QLatin1String("detailed")) {
+    }
+    else if (str == QLatin1String("detailed")) {
         ret = Fm::FolderView::DetailedListMode;
-    } else if (str == QLatin1String("thumbnail")) {
+    }
+    else if (str == QLatin1String("thumbnail")) {
         ret = Fm::FolderView::ThumbnailMode;
-    } else {
+    }
+    else {
         ret = Fm::FolderView::IconMode;
     }
     return ret;
@@ -736,21 +744,29 @@ static Fm::FolderModel::ColumnId sortColumnFromString(const QString str) {
     Fm::FolderModel::ColumnId ret;
     if (str == QLatin1String("name")) {
         ret = Fm::FolderModel::ColumnFileName;
-    } else if (str == QLatin1String("type")) {
+    }
+    else if (str == QLatin1String("type")) {
         ret = Fm::FolderModel::ColumnFileType;
-    } else if (str == QLatin1String("size")) {
+    }
+    else if (str == QLatin1String("size")) {
         ret = Fm::FolderModel::ColumnFileSize;
-    } else if (str == QLatin1String("mtime")) {
+    }
+    else if (str == QLatin1String("mtime")) {
         ret = Fm::FolderModel::ColumnFileMTime;
-    } else if (str == QLatin1String("crtime")) {
+    }
+    else if (str == QLatin1String("crtime")) {
         ret = Fm::FolderModel::ColumnFileCrTime;
-    } else if (str == QLatin1String("dtime")) {
+    }
+    else if (str == QLatin1String("dtime")) {
         ret = Fm::FolderModel::ColumnFileDTime;
-    } else if (str == QLatin1String("owner")) {
+    }
+    else if (str == QLatin1String("owner")) {
         ret = Fm::FolderModel::ColumnFileOwner;
-    } else if (str == QLatin1String("group")) {
+    }
+    else if (str == QLatin1String("group")) {
         ret = Fm::FolderModel::ColumnFileGroup;
-    } else {
+    }
+    else {
         ret = Fm::FolderModel::ColumnFileName;
     }
     return ret;
@@ -777,9 +793,11 @@ static Fm::SidePane::Mode sidePaneModeFromString(const QString& str) {
     Fm::SidePane::Mode ret;
     if (str == QLatin1String("none")) {
         ret = Fm::SidePane::ModeNone;
-    } else if (str == QLatin1String("dirtree")) {
+    }
+    else if (str == QLatin1String("dirtree")) {
         ret = Fm::SidePane::ModeDirTree;
-    } else {
+    }
+    else {
         ret = Fm::SidePane::ModePlaces;
     }
     return ret;
@@ -824,11 +842,13 @@ FolderSettings Settings::loadFolderSettings(const Fm::FilePath& path) const {
         settings.setSortFolderFirst(sortFolderFirst());
         settings.setSortHiddenLast(sortHiddenLast());
         settings.setSortCaseSensitive(sortCaseSensitive());
-    } else {
+    }
+    else {
         // either the folder is customized or it inherits settings; load folder-specific settings
         if (!inheritedPath.isValid()) {
             settings.setCustomized(true);
-        } else {
+        }
+        else {
             settings.seInheritedPath(inheritedPath);
         }
 

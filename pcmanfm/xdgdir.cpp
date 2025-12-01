@@ -47,7 +47,8 @@ void XdgDir::setDesktopDir(QString path) {
     QString line = QStringLiteral("XDG_DESKTOP_DIR=\"") + path + QLatin1Char('\"');
     if (str.contains(desktopRegex)) {
         str.replace(desktopRegex, line);
-    } else {
+    }
+    else {
         if (!str.endsWith(QLatin1Char('\n'))) {
             str += QLatin1Char('\n');
         }

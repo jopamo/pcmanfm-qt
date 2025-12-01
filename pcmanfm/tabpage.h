@@ -17,7 +17,6 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-
 #ifndef FM_TABPAGE_H
 #define FM_TABPAGE_H
 
@@ -37,28 +36,22 @@ class FileLauncher;
 class FolderModel;
 class ProxyFolderModel;
 class CachedFolderModel;
-}
+}  // namespace Fm
 
 namespace PCManFM {
 
 class Launcher;
 
 class ProxyFilter : public Fm::ProxyFolderModelFilter {
-public:
+   public:
     ProxyFilter() : fullName_{true} {}
     bool filterAcceptsRow(const Fm::ProxyFolderModel* model, const std::shared_ptr<const Fm::FileInfo>& info) const;
     virtual ~ProxyFilter() {}
-    QString getFilterStr() {
-        return filterStr_;
-    }
-    void setFilterStr(QString str) {
-        filterStr_ = str;
-    }
-    void filterFullName(bool fullName) {
-        fullName_ = fullName;
-    }
+    QString getFilterStr() { return filterStr_; }
+    void setFilterStr(QString str) { filterStr_ = str; }
+    void filterFullName(bool fullName) { fullName_ = fullName; }
 
-private:
+   private:
     bool fullName_;
     QString filterStr_;
 };
@@ -67,43 +60,37 @@ private:
 
 class FilterEdit : public QLineEdit {
     Q_OBJECT
-public:
-    FilterEdit(QWidget *parent = nullptr);
+   public:
+    FilterEdit(QWidget* parent = nullptr);
     ~FilterEdit() {};
     void keyPressed(QKeyEvent* event);
 
-protected:
+   protected:
     virtual void focusOutEvent(QFocusEvent* event) override {
         Q_EMIT lostFocus();
         QLineEdit::focusOutEvent(event);
     }
     virtual void keyPressEvent(QKeyEvent* event) override;
 
-Q_SIGNALS:
+   Q_SIGNALS:
     void lostFocus();
 };
 
 class FilterBar : public QWidget {
     Q_OBJECT
-public:
-    FilterBar(QWidget *parent = nullptr);
+   public:
+    FilterBar(QWidget* parent = nullptr);
     ~FilterBar() {};
 
-    void focusBar() {
-        filterEdit_->setFocus();
-    }
-    void clear() {
-        filterEdit_->clear();
-    }
-    void keyPressed(QKeyEvent* event) {
-        filterEdit_->keyPressed(event);
-    }
+    void focusBar() { filterEdit_->setFocus(); }
+    void clear() { filterEdit_->clear(); }
+    void keyPressed(QKeyEvent* event) { filterEdit_->keyPressed(event); }
 
-Q_SIGNALS:
-    void textChanged(const QString &text);
+   Q_SIGNALS:
+    void textChanged(const QString& text);
     void lostFocus();
 
-private:
+   private:
     FilterEdit* filterEdit_;
 };
 
@@ -112,55 +99,36 @@ private:
 class TabPage : public QWidget {
     Q_OBJECT
 
-public:
-    enum StatusTextType {
-        StatusTextNormal,
-        StatusTextSelectedFiles,
-        StatusTextFSInfo,
-        StatusTextNum
-    };
+   public:
+    enum StatusTextType { StatusTextNormal, StatusTextSelectedFiles, StatusTextFSInfo, StatusTextNum };
 
-public:
+   public:
     explicit TabPage(QWidget* parent = nullptr);
     virtual ~TabPage();
 
     void chdir(Fm::FilePath newPath, bool addHistory = true);
 
-    Fm::FolderView::ViewMode viewMode() {
-        return folderSettings_.viewMode();
-    }
+    Fm::FolderView::ViewMode viewMode() { return folderSettings_.viewMode(); }
 
     void setViewMode(Fm::FolderView::ViewMode mode);
 
     void sort(int col, Qt::SortOrder order = Qt::AscendingOrder);
 
-    int sortColumn() {
-        return folderSettings_.sortColumn();
-    }
+    int sortColumn() { return folderSettings_.sortColumn(); }
 
-    Qt::SortOrder sortOrder() {
-        return folderSettings_.sortOrder();
-    }
+    Qt::SortOrder sortOrder() { return folderSettings_.sortOrder(); }
 
-    bool sortFolderFirst() {
-        return folderSettings_.sortFolderFirst();
-    }
+    bool sortFolderFirst() { return folderSettings_.sortFolderFirst(); }
     void setSortFolderFirst(bool value);
 
-    bool sortHiddenLast() {
-        return folderSettings_.sortHiddenLast();
-    }
+    bool sortHiddenLast() { return folderSettings_.sortHiddenLast(); }
     void setSortHiddenLast(bool value);
 
-    bool sortCaseSensitive() {
-        return folderSettings_.sortCaseSensitive();
-    }
+    bool sortCaseSensitive() { return folderSettings_.sortCaseSensitive(); }
 
     void setSortCaseSensitive(bool value);
 
-    bool showHidden() {
-        return proxyModel_->showHidden();
-    }
+    bool showHidden() { return proxyModel_->showHidden(); }
 
     void setShowHidden(bool showHidden);
 
@@ -168,35 +136,21 @@ public:
 
     void saveFolderSorting();
 
-    Fm::FilePath path() {
-        return folder_ ? folder_->path() : Fm::FilePath();
-    }
+    Fm::FilePath path() { return folder_ ? folder_->path() : Fm::FilePath(); }
 
     QString pathName();
 
-    const std::shared_ptr<Fm::Folder>& folder() {
-        return folder_;
-    }
+    const std::shared_ptr<Fm::Folder>& folder() { return folder_; }
 
-    Fm::FolderModel* folderModel() {
-        return reinterpret_cast<Fm::FolderModel*>(folderModel_);
-    }
+    Fm::FolderModel* folderModel() { return reinterpret_cast<Fm::FolderModel*>(folderModel_); }
 
-    View* folderView() {
-        return folderView_;
-    }
+    View* folderView() { return folderView_; }
 
-    Fm::BrowseHistory& browseHistory() {
-        return history_;
-    }
+    Fm::BrowseHistory& browseHistory() { return history_; }
 
-    Fm::FileInfoList selectedFiles() {
-        return folderView_->selectedFiles();
-    }
+    Fm::FileInfoList selectedFiles() { return folderView_->selectedFiles(); }
 
-    Fm::FilePathList selectedFilePaths() {
-        return folderView_->selectedFilePaths();
-    }
+    Fm::FilePathList selectedFilePaths() { return folderView_->selectedFilePaths(); }
 
     void selectAll();
 
@@ -206,23 +160,15 @@ public:
 
     void reload();
 
-    QString title() const {
-        return title_;
-    }
+    QString title() const { return title_; }
 
-    QString statusText(StatusTextType type = StatusTextNormal) const {
-        return statusText_[type];
-    }
+    QString statusText(StatusTextType type = StatusTextNormal) const { return statusText_[type]; }
 
-    bool canBackward() {
-        return history_.canBackward();
-    }
+    bool canBackward() { return history_.canBackward(); }
 
     void backward();
 
-    bool canForward() {
-        return history_.canForward();
-    }
+    bool canForward() { return history_.canForward(); }
 
     void forward();
 
@@ -234,35 +180,27 @@ public:
 
     void updateFromSettings(Settings& settings);
 
-    void setFileLauncher(Fm::FileLauncher* launcher) {
-        folderView_->setFileLauncher(launcher);
-    }
+    void setFileLauncher(Fm::FileLauncher* launcher) { folderView_->setFileLauncher(launcher); }
 
-    Fm::FileLauncher* fileLauncher() {
-        return folderView_->fileLauncher();
-    }
+    Fm::FileLauncher* fileLauncher() { return folderView_->fileLauncher(); }
 
     QString getFilterStr() {
-        if(proxyFilter_) {
+        if (proxyFilter_) {
             return proxyFilter_->getFilterStr();
         }
         return QString();
     }
 
     void setFilterStr(QString str) {
-        if(proxyFilter_) {
+        if (proxyFilter_) {
             proxyFilter_->setFilterStr(str);
         }
     }
 
     void applyFilter();
 
-    bool hasCustomizedView() const {
-        return folderSettings_.isCustomized();
-    }
-    bool hasRecursiveCustomizedView() const {
-        return folderSettings_.isCustomized() && folderSettings_.recursive();
-    }
+    bool hasCustomizedView() const { return folderSettings_.isCustomized(); }
+    bool hasRecursiveCustomizedView() const { return folderSettings_.isCustomized() && folderSettings_.recursive(); }
     bool hasInheritedCustomizedView() const {
         return !folderSettings_.isCustomized() && folderSettings_.inheritedPath().isValid();
     }
@@ -274,22 +212,18 @@ public:
     void transientFilterBar(bool transient);
 
     void showFilterBar();
-    bool isFilterBarVisible() const {
-        return (filterBar_ && filterBar_->isVisible());
-    }
+    bool isFilterBarVisible() const { return (filterBar_ && filterBar_->isVisible()); }
     void clearFilter() {
-        if(filterBar_) {
+        if (filterBar_) {
             filterBar_->clear();
         }
     }
 
     void createShortcut();
 
-    void setFilesToSelect(const Fm::FilePathList& files) {
-        filesToSelect_ = files;
-    }
+    void setFilesToSelect(const Fm::FilePathList& files) { filesToSelect_ = files; }
 
-Q_SIGNALS:
+   Q_SIGNALS:
     void statusChanged(int type, QString statusText);
     void titleChanged();
     void sortFilterChanged();
@@ -298,10 +232,10 @@ Q_SIGNALS:
     void folderUnmounted();
     void backspacePressed();
 
-protected:
+   protected:
     virtual bool eventFilter(QObject* watched, QEvent* event);
 
-protected Q_SLOTS:
+   protected Q_SLOTS:
     void onSelChanged();
     void onUiUpdated();
     void onFileSizeChanged(const QModelIndex& index);
@@ -309,7 +243,7 @@ protected Q_SLOTS:
     void onFilterStringChanged(QString str);
     void onLosingFilterBarFocus();
 
-private:
+   private:
     void freeFolder();
     QString formatStatusText();
     void localizeTitle(const Fm::FilePath& path);
@@ -327,7 +261,7 @@ private:
 
     bool canOpenAdmin();
 
-private:
+   private:
     View* folderView_;
     Fm::CachedFolderModel* folderModel_;
     Fm::ProxyFolderModel* proxyModel_;
@@ -336,17 +270,17 @@ private:
     std::shared_ptr<Fm::Folder> folder_;
     QString title_;
     QString statusText_[StatusTextNum];
-    Fm::BrowseHistory history_; // browsing history
-    Fm::FilePath lastFolderPath_; // last browsed folder
+    Fm::BrowseHistory history_;    // browsing history
+    Fm::FilePath lastFolderPath_;  // last browsed folder
     bool overrideCursor_;
     FolderSettings folderSettings_;
     QTimer* selectionTimer_;
     FilterBar* filterBar_;
     QStringList filesToTrust_;
-    Fm::FilePathList filesToSelect_; // files to select
-    bool changingDir_; // chdir is in progress
+    Fm::FilePathList filesToSelect_;  // files to select
+    bool changingDir_;                // chdir is in progress
 };
 
-}
+}  // namespace PCManFM
 
-#endif // FM_TABPAGE_H
+#endif  // FM_TABPAGE_H

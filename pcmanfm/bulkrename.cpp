@@ -55,7 +55,8 @@ BulkRenameDialog::BulkRenameDialog(QWidget* parent, Qt::WindowFlags flags) : QDi
         connect(active, &QGroupBox::clicked, this, [active, b1, b2](bool checked) {
             if (!checked) {
                 active->setChecked(true);  // Enforce radio-button-like behavior (at least one active)
-            } else {
+            }
+            else {
                 b1->setChecked(false);
                 b2->setChecked(false);
             }
@@ -70,9 +71,17 @@ BulkRenameDialog::BulkRenameDialog(QWidget* parent, Qt::WindowFlags flags) : QDi
     setMaximumHeight(minimumSizeHint().height());
 }
 
-void BulkRenameDialog::setState(const QString& baseName, const QString& findStr, const QString& replaceStr,
-                                bool replacement, bool caseChange, bool zeroPadding, bool respectLocale, bool regex,
-                                bool toUpperCase, int start, Qt::CaseSensitivity cs) {
+void BulkRenameDialog::setState(const QString& baseName,
+                                const QString& findStr,
+                                const QString& replaceStr,
+                                bool replacement,
+                                bool caseChange,
+                                bool zeroPadding,
+                                bool respectLocale,
+                                bool regex,
+                                bool toUpperCase,
+                                int start,
+                                Qt::CaseSensitivity cs) {
     if (!baseName.isEmpty()) {
         ui.lineEdit->setText(baseName);
     }
@@ -85,10 +94,12 @@ void BulkRenameDialog::setState(const QString& baseName, const QString& findStr,
         ui.serialGroupBox->setChecked(false);
         if (replacement) {
             ui.replaceGroupBox->setChecked(true);
-        } else {
+        }
+        else {
             ui.caseGroupBox->setChecked(true);
         }
-    } else {
+    }
+    else {
         // Default to serial if nothing else is specified
         ui.serialGroupBox->setChecked(true);
     }
@@ -100,7 +111,8 @@ void BulkRenameDialog::setState(const QString& baseName, const QString& findStr,
 
     if (toUpperCase) {
         ui.upperCaseButton->setChecked(true);
-    } else {
+    }
+    else {
         ui.lowerCaseButton->setChecked(true);
     }
 }
@@ -168,9 +180,11 @@ BulkRenamer::BulkRenamer(const Fm::FileInfoList& files, QWidget* parent) {
         bool success = false;
         if (replacement) {
             success = renameByReplacing(files, findStr, replaceStr, cs, regex, parent);
-        } else if (caseChange) {
+        }
+        else if (caseChange) {
             success = renameByChangingCase(files, locale, toUpperCase, parent);
-        } else {
+        }
+        else {
             success = rename(files, baseName, locale, start, zeroPadding, respectLocale, parent);
         }
 
@@ -181,8 +195,13 @@ BulkRenamer::BulkRenamer(const Fm::FileInfoList& files, QWidget* parent) {
 
 BulkRenamer::~BulkRenamer() = default;
 
-bool BulkRenamer::rename(const Fm::FileInfoList& files, QString& baseName, const QLocale& locale, int start,
-                         bool zeroPadding, bool respectLocale, QWidget* parent) {
+bool BulkRenamer::rename(const Fm::FileInfoList& files,
+                         QString& baseName,
+                         const QLocale& locale,
+                         int start,
+                         bool zeroPadding,
+                         bool respectLocale,
+                         QWidget* parent) {
     // Ensure the pattern has a placeholder for the number
     if (!baseName.contains(QLatin1Char('#'))) {
         int end = baseName.lastIndexOf(QLatin1Char('.'));
@@ -259,8 +278,12 @@ bool BulkRenamer::rename(const Fm::FileInfoList& files, QString& baseName, const
     return true;
 }
 
-bool BulkRenamer::renameByReplacing(const Fm::FileInfoList& files, const QString& findStr, const QString& replaceStr,
-                                    Qt::CaseSensitivity cs, bool regex, QWidget* parent) {
+bool BulkRenamer::renameByReplacing(const Fm::FileInfoList& files,
+                                    const QString& findStr,
+                                    const QString& replaceStr,
+                                    Qt::CaseSensitivity cs,
+                                    bool regex,
+                                    QWidget* parent) {
     if (findStr.isEmpty()) {
         QMessageBox::critical(parent, QObject::tr("Error"), QObject::tr("Nothing to find."));
         return false;
@@ -299,7 +322,8 @@ bool BulkRenamer::renameByReplacing(const Fm::FileInfoList& files, const QString
 
         if (regex) {
             newName.replace(regexFind, replaceStr);
-        } else {
+        }
+        else {
             newName.replace(findStr, replaceStr, cs);
         }
 
@@ -327,7 +351,9 @@ bool BulkRenamer::renameByReplacing(const Fm::FileInfoList& files, const QString
     return true;
 }
 
-bool BulkRenamer::renameByChangingCase(const Fm::FileInfoList& files, const QLocale& locale, bool toUpperCase,
+bool BulkRenamer::renameByChangingCase(const Fm::FileInfoList& files,
+                                       const QLocale& locale,
+                                       bool toUpperCase,
                                        QWidget* parent) {
     QProgressDialog progress(QObject::tr("Renaming files..."), QObject::tr("Abort"), 0, files.size(), parent);
     progress.setWindowModality(Qt::WindowModal);

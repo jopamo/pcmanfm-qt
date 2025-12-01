@@ -95,7 +95,8 @@ QList<VolumeInfo> GioVolumeBackend::listVolumes() {
 
 bool GioVolumeBackend::mount(const QString& id, QString* errorOut) {
     if (!volumeMonitor_) {
-        if (errorOut) *errorOut = QStringLiteral("Volume monitor not available");
+        if (errorOut)
+            *errorOut = QStringLiteral("Volume monitor not available");
         return false;
     }
 
@@ -111,7 +112,8 @@ bool GioVolumeBackend::mount(const QString& id, QString* errorOut) {
             targetVolume = volume;
             g_object_ref(targetVolume);
         }
-        if (volumeId) g_free(volumeId);
+        if (volumeId)
+            g_free(volumeId);
         g_object_unref(volume);
         iter = iter->next;
     }
@@ -119,7 +121,8 @@ bool GioVolumeBackend::mount(const QString& id, QString* errorOut) {
     g_list_free(gvolumes);
 
     if (!targetVolume) {
-        if (errorOut) *errorOut = QStringLiteral("Volume not found: ") + id;
+        if (errorOut)
+            *errorOut = QStringLiteral("Volume not found: ") + id;
         return false;
     }
 
@@ -129,7 +132,8 @@ bool GioVolumeBackend::mount(const QString& id, QString* errorOut) {
 
     bool success = !error;
     if (error) {
-        if (errorOut) *errorOut = QString::fromUtf8(error->message);
+        if (errorOut)
+            *errorOut = QString::fromUtf8(error->message);
         g_error_free(error);
     }
 
@@ -139,7 +143,8 @@ bool GioVolumeBackend::mount(const QString& id, QString* errorOut) {
 
 bool GioVolumeBackend::unmount(const QString& id, QString* errorOut) {
     if (!volumeMonitor_) {
-        if (errorOut) *errorOut = QStringLiteral("Volume monitor not available");
+        if (errorOut)
+            *errorOut = QStringLiteral("Volume monitor not available");
         return false;
     }
 
@@ -158,7 +163,8 @@ bool GioVolumeBackend::unmount(const QString& id, QString* errorOut) {
                 targetMount = mount;
                 g_object_ref(targetMount);
             }
-            if (volumeId) g_free(volumeId);
+            if (volumeId)
+                g_free(volumeId);
             g_object_unref(volume);
         }
 
@@ -169,7 +175,8 @@ bool GioVolumeBackend::unmount(const QString& id, QString* errorOut) {
     g_list_free(gmounts);
 
     if (!targetMount) {
-        if (errorOut) *errorOut = QStringLiteral("Mounted volume not found: ") + id;
+        if (errorOut)
+            *errorOut = QStringLiteral("Mounted volume not found: ") + id;
         return false;
     }
 
@@ -179,7 +186,8 @@ bool GioVolumeBackend::unmount(const QString& id, QString* errorOut) {
 
     bool success = !error;
     if (error) {
-        if (errorOut) *errorOut = QString::fromUtf8(error->message);
+        if (errorOut)
+            *errorOut = QString::fromUtf8(error->message);
         g_error_free(error);
     }
 
@@ -189,7 +197,8 @@ bool GioVolumeBackend::unmount(const QString& id, QString* errorOut) {
 
 bool GioVolumeBackend::eject(const QString& id, QString* errorOut) {
     if (!volumeMonitor_) {
-        if (errorOut) *errorOut = QStringLiteral("Volume monitor not available");
+        if (errorOut)
+            *errorOut = QStringLiteral("Volume monitor not available");
         return false;
     }
 
@@ -205,7 +214,8 @@ bool GioVolumeBackend::eject(const QString& id, QString* errorOut) {
             targetVolume = volume;
             g_object_ref(targetVolume);
         }
-        if (volumeId) g_free(volumeId);
+        if (volumeId)
+            g_free(volumeId);
         g_object_unref(volume);
         iter = iter->next;
     }
@@ -213,7 +223,8 @@ bool GioVolumeBackend::eject(const QString& id, QString* errorOut) {
     g_list_free(gvolumes);
 
     if (!targetVolume) {
-        if (errorOut) *errorOut = QStringLiteral("Volume not found: ") + id;
+        if (errorOut)
+            *errorOut = QStringLiteral("Volume not found: ") + id;
         return false;
     }
 
@@ -223,7 +234,8 @@ bool GioVolumeBackend::eject(const QString& id, QString* errorOut) {
 
     bool success = !error;
     if (error) {
-        if (errorOut) *errorOut = QString::fromUtf8(error->message);
+        if (errorOut)
+            *errorOut = QString::fromUtf8(error->message);
         g_error_free(error);
     }
 

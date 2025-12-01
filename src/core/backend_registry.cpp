@@ -43,7 +43,9 @@ void BackendRegistry::initDefaults() {
     qDebug() << "BackendRegistry initialized";
 }
 
-std::unique_ptr<IFileOps> BackendRegistry::createFileOps() { return std::make_unique<QtFileOps>(); }
+std::unique_ptr<IFileOps> BackendRegistry::createFileOps() {
+    return std::make_unique<QtFileOps>();
+}
 
 std::unique_ptr<IFolderModel> BackendRegistry::createFolderModel(QObject* parent) {
     return std::make_unique<QtFolderModel>(parent);

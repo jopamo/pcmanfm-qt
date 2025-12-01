@@ -17,7 +17,9 @@ namespace PCManFM {
 namespace {
 
 // Helper to access Application settings concisely
-Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+Settings& appSettings() {
+    return static_cast<Application*>(qApp)->settings();
+}
 
 }  // namespace
 
@@ -28,7 +30,8 @@ Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
 // Helper to iterate over every TabPage in the CURRENT window only
 template <typename Func>
 void MainWindow::forEachTabPageLocal(Func func) {
-    if (!ui.viewSplitter) return;
+    if (!ui.viewSplitter)
+        return;
 
     for (int i = 0; i < ui.viewSplitter->count(); ++i) {
         if (auto* viewFrame = qobject_cast<ViewFrame*>(ui.viewSplitter->widget(i))) {

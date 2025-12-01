@@ -78,7 +78,8 @@ class QtFileOps::Worker : public QObject {
                     Q_EMIT finished(false, QStringLiteral("Failed to copy directory: %1").arg(source));
                     return;
                 }
-            } else {
+            }
+            else {
                 if (!copyFile(source, destinationPath, progressInfo)) {
                     Q_EMIT finished(false, QStringLiteral("Failed to copy file: %1").arg(source));
                     return;
@@ -151,7 +152,8 @@ class QtFileOps::Worker : public QObject {
                     Q_EMIT finished(false, QStringLiteral("Failed to delete directory: %1").arg(source));
                     return;
                 }
-            } else {
+            }
+            else {
                 if (!QFile::remove(source)) {
                     Q_EMIT finished(false, QStringLiteral("Failed to delete file: %1").arg(source));
                     return;
@@ -220,7 +222,8 @@ class QtFileOps::Worker : public QObject {
                 if (!copyDirectory(sourcePath, destPath, progressInfo)) {
                     return false;
                 }
-            } else {
+            }
+            else {
                 if (!copyFile(sourcePath, destPath, progressInfo)) {
                     return false;
                 }
@@ -263,7 +266,9 @@ void QtFileOps::start(const FileOpRequest& req) {
     Q_EMIT startRequest(req);
 }
 
-void QtFileOps::cancel() { Q_EMIT cancelRequest(); }
+void QtFileOps::cancel() {
+    Q_EMIT cancelRequest();
+}
 
 }  // namespace PCManFM
 

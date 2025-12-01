@@ -36,7 +36,8 @@ void TabBar::mousePressEvent(QMouseEvent* event) {
 
     if (event->button() == Qt::LeftButton && tabAt(event->pos()) > -1) {
         dragStartPosition_ = event->pos();
-    } else {
+    }
+    else {
         dragStartPosition_ = QPoint();
     }
 
@@ -59,7 +60,8 @@ void TabBar::mouseMoveEvent(QMouseEvent* event) {
     if ((event->buttons() & Qt::LeftButton) && dragStarted_ &&
         !window()->geometry().contains(event->globalPosition().toPoint())) {
         handleTabDrag(event);
-    } else {
+    }
+    else {
         QTabBar::mouseMoveEvent(event);
     }
 }
@@ -86,19 +88,23 @@ void TabBar::handleTabDrag(QMouseEvent* event) {
         // Detach the tab if more than one tab is present, otherwise cancel cleanly
         if (tabCountBefore > 1) {
             Q_EMIT tabDetached();
-        } else {
+        }
+        else {
             finishMouseMoveEvent();
         }
-    } else {
+    }
+    else {
         // Another window may have accepted this drop
         // MainWindow::dropEvent sets the tabDropped property when we drop into ourselves
         const bool droppedIntoTabBar = property(tabDropped).toBool();
         if (droppedIntoTabBar) {
             setProperty(tabDropped, QVariant());
-        } else {
+        }
+        else {
             if (tabCountBefore > 1) {
                 Q_EMIT tabDetached();
-            } else {
+            }
+            else {
                 finishMouseMoveEvent();
             }
         }
@@ -169,7 +175,9 @@ QSize TabBar::tabSizeHint(int index) const {
 }
 
 // Keep minimum tab size equal to the hint to avoid shrinking under eliding
-QSize TabBar::minimumTabSizeHint(int index) const { return tabSizeHint(index); }
+QSize TabBar::minimumTabSizeHint(int index) const {
+    return tabSizeHint(index);
+}
 
 void TabBar::tabInserted(int index) {
     QTabBar::tabInserted(index);

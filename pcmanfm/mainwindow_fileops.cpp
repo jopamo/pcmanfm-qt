@@ -213,7 +213,8 @@ void MainWindow::on_actionDelete_triggered() {
                 return;
             }
         }
-    } else {
+    }
+    else {
         auto fileOps = BackendRegistry::createFileOps();
         if (!fileOps) {
             QMessageBox::warning(this, tr("Delete Failed"), tr("File operations backend is not available."));
@@ -348,7 +349,8 @@ void MainWindow::openFolderAndSelectFiles(const Fm::FilePathList& files, bool in
         if (auto* page = win->currentPage()) {
             page->setFilesToSelect(files);
         }
-    } else {
+    }
+    else {
         auto* newPage = new TabPage(this);
         addTabWithPage(newPage, activeViewFrame_, std::move(path));
         newPage->setFilesToSelect(files);

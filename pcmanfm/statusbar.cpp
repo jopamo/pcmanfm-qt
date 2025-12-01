@@ -73,7 +73,8 @@ void StatusBar::reallyShowMessage() {
         QString normalized = lastMessage_;
         normalized.replace(QLatin1Char('\n'), QLatin1Char(' ')).replace(QLatin1Char('\t'), QLatin1Char(' '));
         statusLabel_->setText(normalized);
-    } else {
+    }
+    else {
         QStatusBar::showMessage(lastMessage_, lastTimeOut_);
     }
 }

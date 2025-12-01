@@ -90,7 +90,8 @@ void ConnectServerDialog::onCurrentIndexChanged(int index) {
 
     if (serverType.canAnonymous) {
         ui.anonymousLogin->setChecked(true);
-    } else {
+    }
+    else {
         ui.loginAsUser->setChecked(true);
     }
 
@@ -106,7 +107,8 @@ void ConnectServerDialog::checkInput() {
 
     if (hostText.isEmpty()) {
         valid = false;
-    } else if (ui.loginAsUser->isChecked() && userText.isEmpty()) {
+    }
+    else if (ui.loginAsUser->isChecked() && userText.isEmpty()) {
         valid = false;
     }
 

@@ -212,7 +212,8 @@ class Settings : public QObject {
     int windowWidth() const {
         if (rememberWindowSize_) {
             return lastWindowWidth_;
-        } else {
+        }
+        else {
             return fixedWindowWidth_;
         }
     }
@@ -220,7 +221,8 @@ class Settings : public QObject {
     int windowHeight() const {
         if (rememberWindowSize_) {
             return lastWindowHeight_;
-        } else {
+        }
+        else {
             return fixedWindowHeight_;
         }
     }
@@ -228,7 +230,8 @@ class Settings : public QObject {
     bool windowMaximized() const {
         if (rememberWindowSize_) {
             return lastWindowMaximized_;
-        } else {
+        }
+        else {
             return false;
         }
     }
@@ -284,7 +287,8 @@ class Settings : public QObject {
     void setHiddenPlace(const QString& str, bool hide) {
         if (hide) {
             hiddenPlaces_ << str;
-        } else {
+        }
+        else {
             hiddenPlaces_.remove(str);
         }
     }

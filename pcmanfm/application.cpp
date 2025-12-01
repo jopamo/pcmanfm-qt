@@ -65,7 +65,9 @@ static const char* ifaceName = "org.pcmanfm.Application";
 // ProxyStyle
 //-----------------------------------------------------------------------------
 
-int ProxyStyle::styleHint(StyleHint hint, const QStyleOption* option, const QWidget* widget,
+int ProxyStyle::styleHint(StyleHint hint,
+                          const QStyleOption* option,
+                          const QWidget* widget,
                           QStyleHintReturn* returnData) const {
     auto* app = qobject_cast<Application*>(qApp);
 
@@ -152,7 +154,8 @@ Application::Application(int& argc, char** argv)
                     });
             iface->registerService(fileManagerService, QDBusConnectionInterface::QueueService);
         }
-    } else {
+    }
+    else {
         // another instance already owns org.pcmanfm.PCManFM, this one acts as a client
         isPrimaryInstance = false;
     }
@@ -172,7 +175,8 @@ void Application::initWatch() {
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qDebug() << Q_FUNC_INFO << "Could not read:" << file.fileName();
         userDirsFile_.clear();
-    } else {
+    }
+    else {
         userDirsFile_ = file.fileName();
     }
 
@@ -243,11 +247,13 @@ bool Application::parseCommandLineArgs() {
             // file searching utility
             findFiles(parser.positionalArguments());
             keepRunning = true;
-        } else if (parser.isSet(showPrefOption)) {
+        }
+        else if (parser.isSet(showPrefOption)) {
             // open preferences dialog directly at a specific page
             preferences(parser.value(showPrefOption));
             keepRunning = true;
-        } else {
+        }
+        else {
             bool reopenLastTabs = false;
             QStringList paths = parser.positionalArguments();
 
@@ -264,7 +270,8 @@ bool Application::parseCommandLineArgs() {
             }
             keepRunning = true;
         }
-    } else {
+    }
+    else {
         // secondary instance, forward the request to the primary via DBus
         QDBusConnection dbus = QDBusConnection::sessionBus();
         QDBusInterface iface(QLatin1String(serviceName), QStringLiteral("/Application"), QLatin1String(ifaceName), dbus,
@@ -277,9 +284,11 @@ bool Application::parseCommandLineArgs() {
 
         if (parser.isSet(findFilesOption)) {
             iface.call(QStringLiteral("findFiles"), parser.positionalArguments());
-        } else if (parser.isSet(showPrefOption)) {
+        }
+        else if (parser.isSet(showPrefOption)) {
             iface.call(QStringLiteral("preferences"), parser.value(showPrefOption));
-        } else {
+        }
+        else {
             bool reopenLastTabs = false;
             QStringList paths = parser.positionalArguments();
 
@@ -463,13 +472,16 @@ void Application::launchFiles(const QString& cwd, const QStringList& paths, bool
         if (pathName == "~") {
             // home directory shortcut
             path = Fm::FilePath::homeDir();
-        } else if (!pathName.isEmpty() && pathName[0] == '/') {
+        }
+        else if (!pathName.isEmpty() && pathName[0] == '/') {
             // absolute local path
             path = Fm::FilePath::fromLocalPath(pathName.constData());
-        } else if (pathName.contains(":/")) {
+        }
+        else if (pathName.contains(":/")) {
             // URI such as file://, smb://, etc
             path = Fm::FilePath::fromUri(pathName.constData());
-        } else {
+        }
+        else {
             // relative path, resolved against the caller's working directory
             if (Q_UNLIKELY(!cwdPath)) {
                 cwdPath = Fm::FilePath::fromLocalPath(cwd.toLocal8Bit().constData());
@@ -504,7 +516,8 @@ void Application::launchFiles(const QString& cwd, const QStringList& paths, bool
         Launcher launcher(window);
         launcher.openInNewTab();
         launcher.launchPaths(nullptr, pathList);
-    } else {
+    }
+    else {
         Launcher(nullptr).launchPaths(nullptr, pathList);
     }
 
@@ -530,7 +543,9 @@ void Application::launchFiles(const QString& cwd, const QStringList& paths, bool
     }
 }
 
-void Application::openFolders(Fm::FileInfoList files) { Launcher(nullptr).launchFiles(nullptr, std::move(files)); }
+void Application::openFolders(Fm::FileInfoList files) {
+    Launcher(nullptr).launchFiles(nullptr, std::move(files));
+}
 
 void Application::openFolderInTerminal(Fm::FilePath path) {
     if (!settings_.terminal().isEmpty()) {
@@ -539,7 +554,8 @@ void Application::openFolderInTerminal(Fm::FilePath path) {
         if (!Fm::launchTerminal(terminalName.constData(), path, err)) {
             QMessageBox::critical(nullptr, tr("Error"), err.message());
         }
-    } else {
+    }
+    else {
         // the terminal command is not configured yet, guide the user to the preferences
         QMessageBox::critical(nullptr, tr("Error"), tr("Terminal emulator is not set"));
         preferences(QStringLiteral("advanced"));
@@ -550,7 +566,8 @@ void Application::preferences(const QString& page) {
     // open or reuse the preferences dialog and show the requested page
     if (!preferencesDialog_) {
         preferencesDialog_ = new PreferencesDialog(page);
-    } else {
+    }
+    else {
         preferencesDialog_.data()->selectPage(page);
     }
 
@@ -752,7 +769,8 @@ void Application::installSigtermHandler() {
         if (::sigaction(SIGTERM, &action, nullptr) != 0) {
             qWarning("Couldn't install SIGTERM handler");
         }
-    } else {
+    }
+    else {
         qWarning("Couldn't create SIGTERM socketpair");
     }
 }

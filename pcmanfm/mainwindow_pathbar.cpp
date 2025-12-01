@@ -19,7 +19,9 @@ namespace PCManFM {
 namespace {
 
 // Helper to access Application settings concisely
-Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+Settings& appSettings() {
+    return static_cast<Application*>(qApp)->settings();
+}
 
 }  // namespace
 
@@ -27,13 +29,15 @@ void MainWindow::createPathBar(bool usePathButtons) {
     // path bars/entries may be created after tab pages so their paths/texts should be set
     if (splitView_) {
         createSplitViewPathBar(usePathButtons);
-    } else {
+    }
+    else {
         createSingleViewPathBar(usePathButtons);
     }
 }
 
 void MainWindow::createSplitViewPathBar(bool usePathButtons) {
-    if (!ui.viewSplitter) return;
+    if (!ui.viewSplitter)
+        return;
 
     for (int i = 0; i < ui.viewSplitter->count(); ++i) {
         if (auto* viewFrame = qobject_cast<ViewFrame*>(ui.viewSplitter->widget(i))) {
@@ -47,7 +51,8 @@ void MainWindow::createSplitViewPathBar(bool usePathButtons) {
                 if (curPage) {
                     pathBar->setPath(curPage->path());
                 }
-            } else if (auto* pathEntry = qobject_cast<Fm::PathEdit*>(viewFrame->getTopBar())) {
+            }
+            else if (auto* pathEntry = qobject_cast<Fm::PathEdit*>(viewFrame->getTopBar())) {
                 connect(pathEntry, &Fm::PathEdit::returnPressed, this, &MainWindow::onPathEntryReturnPressed);
                 if (curPage) {
                     pathEntry->setText(curPage->pathName());
@@ -78,7 +83,8 @@ void MainWindow::createSingleViewPathBar(bool usePathButtons) {
                 pathBar_->setPath(curPage->path());
             }
         }
-    } else {
+    }
+    else {
         if (pathBar_) {
             delete pathBar_;
             pathBar_ = nullptr;
@@ -126,7 +132,8 @@ void MainWindow::onPathBarChdir(const Fm::FilePath& dirPath) {
         // Single view mode
         page = currentPage();
         viewFrame = activeViewFrame_;
-    } else {
+    }
+    else {
         // Split view mode: find which PathBar sent the signal
         auto* pathBar = qobject_cast<Fm::PathBar*>(sender());
         if (pathBar) {
@@ -147,7 +154,8 @@ void MainWindow::onPathBarMiddleClickChdir(const Fm::FilePath& dirPath) {
 
     if (pathBar_) {
         viewFrame = activeViewFrame_;
-    } else {
+    }
+    else {
         auto* pathBar = qobject_cast<Fm::PathBar*>(sender());
         if (pathBar) {
             viewFrame = qobject_cast<ViewFrame*>(pathBar->parentWidget());
@@ -179,7 +187,9 @@ void MainWindow::on_actionPathButtons_triggered(bool checked) {
     appSettings().setPathBarButtons(true);
 }
 
-void MainWindow::on_actionGo_triggered() { onPathEntryReturnPressed(); }
+void MainWindow::on_actionGo_triggered() {
+    onPathEntryReturnPressed();
+}
 
 void MainWindow::onResetFocus() {
     if (TabPage* page = currentPage()) {
@@ -199,16 +209,19 @@ void MainWindow::focusPathEntry() {
 
         if (auto* pathBar = qobject_cast<Fm::PathBar*>(activeViewFrame_->getTopBar())) {
             pathBar->openEditor();
-        } else if (auto* pathEntry = qobject_cast<Fm::PathEdit*>(activeViewFrame_->getTopBar())) {
+        }
+        else if (auto* pathEntry = qobject_cast<Fm::PathEdit*>(activeViewFrame_->getTopBar())) {
             pathEntry->setFocus();
             pathEntry->selectAll();
         }
-    } else {
+    }
+    else {
         // Single view logic
         if (pathEntry_) {
             pathEntry_->setFocus();
             pathEntry_->selectAll();
-        } else if (pathBar_) {
+        }
+        else if (pathBar_) {
             pathBar_->openEditor();
         }
     }

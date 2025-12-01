@@ -14,20 +14,34 @@ QtFolderModel::~QtFolderModel() {
     // QObject parent-child relationship handles cleanup
 }
 
-void QtFolderModel::setDirectory(const QString& path) { m_fileSystemModel->setRootPath(path); }
+void QtFolderModel::setDirectory(const QString& path) {
+    m_fileSystemModel->setRootPath(path);
+}
 
-QString QtFolderModel::directory() const { return m_fileSystemModel->rootPath(); }
+QString QtFolderModel::directory() const {
+    return m_fileSystemModel->rootPath();
+}
 
-void QtFolderModel::refresh() { m_fileSystemModel->fetchMore(QModelIndex()); }
+void QtFolderModel::refresh() {
+    m_fileSystemModel->fetchMore(QModelIndex());
+}
 
 QModelIndex QtFolderModel::index(int row, int column, const QModelIndex& parent) const {
     return m_fileSystemModel->index(row, column, parent);
 }
 
-QModelIndex QtFolderModel::parent(const QModelIndex& child) const { return m_fileSystemModel->parent(child); }
+QModelIndex QtFolderModel::parent(const QModelIndex& child) const {
+    return m_fileSystemModel->parent(child);
+}
 
-int QtFolderModel::rowCount(const QModelIndex& parent) const { return m_fileSystemModel->rowCount(parent); }
+int QtFolderModel::rowCount(const QModelIndex& parent) const {
+    return m_fileSystemModel->rowCount(parent);
+}
 
-int QtFolderModel::columnCount(const QModelIndex& parent) const { return m_fileSystemModel->columnCount(parent); }
+int QtFolderModel::columnCount(const QModelIndex& parent) const {
+    return m_fileSystemModel->columnCount(parent);
+}
 
-QVariant QtFolderModel::data(const QModelIndex& index, int role) const { return m_fileSystemModel->data(index, role); }
+QVariant QtFolderModel::data(const QModelIndex& index, int role) const {
+    return m_fileSystemModel->data(index, role);
+}

@@ -17,18 +17,16 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-
 #ifndef PCMANFM_FOLDERVIEW_H
 #define PCMANFM_FOLDERVIEW_H
 
 #include <libfm-qt6/folderview.h>
 #include <libfm-qt6/core/filepath.h>
 
-
 namespace Fm {
 class FileMenu;
 class FolderMenu;
-}
+}  // namespace Fm
 
 namespace PCManFM {
 
@@ -36,36 +34,30 @@ class Settings;
 
 class View : public Fm::FolderView {
     Q_OBJECT
-public:
-
+   public:
     explicit View(Fm::FolderView::ViewMode _mode = IconMode, QWidget* parent = nullptr);
     virtual ~View();
 
     void updateFromSettings(Settings& settings);
 
-    QSize  getMargins() const {
-        return Fm::FolderView::getMargins();
-    }
-    void setMargins(QSize size) {
-        Fm::FolderView::setMargins(size);
-    }
+    QSize getMargins() const { return Fm::FolderView::getMargins(); }
+    void setMargins(QSize size) { Fm::FolderView::setMargins(size); }
 
-protected Q_SLOTS:
+   protected Q_SLOTS:
     void onNewWindow();
     void onNewTab();
     void onOpenInTerminal();
     void onSearch();
 
-protected:
+   protected:
     virtual void onFileClicked(int type, const std::shared_ptr<const Fm::FileInfo>& fileInfo);
     virtual void prepareFileMenu(Fm::FileMenu* menu);
     virtual void prepareFolderMenu(Fm::FolderMenu* menu);
 
-private:
+   private:
     void launchFiles(Fm::FileInfoList files, bool inNewTabs = false);
     void openFolderAndSelectFile(const std::shared_ptr<const Fm::FileInfo>& fileInfo, bool inNewTab = false);
-
 };
 
-}
-#endif // PCMANFM_FOLDERVIEW_H
+}  // namespace PCManFM
+#endif  // PCMANFM_FOLDERVIEW_H

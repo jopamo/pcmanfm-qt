@@ -150,7 +150,8 @@ void FilePropertiesDialog::populateFileInfo() {
     if (m_fileInfos.size() == 1) {
         m_nameLabel->setText(fileInfo->displayName());
         m_typeLabel->setText(fileInfo->mimeType());
-    } else {
+    }
+    else {
         m_nameLabel->setText(tr("%1 items").arg(m_fileInfos.size()));
         m_typeLabel->setText(tr("Multiple items"));
     }
@@ -177,7 +178,8 @@ void FilePropertiesDialog::setupGeneralTab() {
             m_sizeLabel->setText(QStringLiteral("%1 (%2)").arg(size).arg(formatSize(size)));
             m_locationLabel->setText(fi.absolutePath());
             m_modifiedLabel->setText(info->lastModified().toString(Qt::TextDate));
-        } else {
+        }
+        else {
             qint64 totalSize = 0;
             for (const auto& info : m_fileInfos) {
                 totalSize += info->size();
@@ -205,7 +207,8 @@ void FilePropertiesDialog::setupPermissionsTab() {
         QFileInfo fi(m_fileInfos.first()->path());
         m_ownerEdit->setText(fi.owner());
         m_groupEdit->setText(fi.group());
-    } else if (!m_fileInfos.isEmpty()) {
+    }
+    else if (!m_fileInfos.isEmpty()) {
         m_ownerEdit->setText(tr("Multiple values"));
         m_groupEdit->setText(tr("Multiple values"));
     }
@@ -268,7 +271,8 @@ void FilePropertiesDialog::setupPermissionsTab() {
         m_otherRead->setCheckState(perms.testFlag(QFile::ReadOther) ? Qt::Checked : Qt::Unchecked);
         m_otherWrite->setCheckState(perms.testFlag(QFile::WriteOther) ? Qt::Checked : Qt::Unchecked);
         m_otherExec->setCheckState(perms.testFlag(QFile::ExeOther) ? Qt::Checked : Qt::Unchecked);
-    } else if (!m_fileInfos.isEmpty()) {
+    }
+    else if (!m_fileInfos.isEmpty()) {
         m_ownerRead->setTristate(true);
         m_ownerWrite->setTristate(true);
         m_ownerExec->setTristate(true);
@@ -310,7 +314,8 @@ void FilePropertiesDialog::onApplyClicked() {
         }
         if (state == Qt::Checked) {
             perms |= bit;
-        } else {
+        }
+        else {
             perms &= ~bit;
         }
     };
@@ -392,4 +397,6 @@ void FilePropertiesDialog::onApplyClicked() {
     accept();
 }
 
-void FilePropertiesDialog::onCancelClicked() { reject(); }
+void FilePropertiesDialog::onCancelClicked() {
+    reject();
+}

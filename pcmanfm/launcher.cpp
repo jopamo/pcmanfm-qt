@@ -21,7 +21,9 @@ namespace PCManFM {
 namespace {
 
 // Helper to access Application settings concisely
-Settings& appSettings() { return static_cast<Application*>(qApp)->settings(); }
+Settings& appSettings() {
+    return static_cast<Application*>(qApp)->settings();
+}
 
 }  // namespace
 
@@ -72,11 +74,13 @@ bool Launcher::openFolder(GAppLaunchContext* ctx, const Fm::FileInfoList& folder
         if (settings.windowMaximized()) {
             mainWindow->setWindowState(mainWindow->windowState() | Qt::WindowMaximized);
         }
-    } else {
+    }
+    else {
         // We already have a main window, either reuse the current tab or open a new one
         if (openInNewTab_) {
             mainWindow->addTab(std::move(firstPath));
-        } else {
+        }
+        else {
             mainWindow->chdir(std::move(firstPath));
         }
     }

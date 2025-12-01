@@ -36,7 +36,9 @@ constexpr int kUiUpdateDelay = 10;
 constexpr int kSelectionDelay = 200;
 
 // Helper to get settings without repetitive casting
-PCManFM::Settings& appSettings() { return static_cast<PCManFM::Application*>(qApp)->settings(); }
+PCManFM::Settings& appSettings() {
+    return static_cast<PCManFM::Application*>(qApp)->settings();
+}
 
 // Helper function to format status for a single file.
 // Defined here as static to avoid modifying the header file.
@@ -242,7 +244,8 @@ void TabPage::transientFilterBar(bool transient) {
         if (transient) {
             filterBar_->hide();
             connect(filterBar_, &FilterBar::lostFocus, this, &TabPage::onLosingFilterBarFocus);
-        } else {
+        }
+        else {
             filterBar_->show();
             disconnect(filterBar_, &FilterBar::lostFocus, this, &TabPage::onLosingFilterBarFocus);
         }
@@ -276,15 +279,18 @@ bool TabPage::eventFilter(QObject* watched, QEvent* event) {
                     if (!ke->isAutoRepeat()) {
                         Q_EMIT backspacePressed();
                     }
-                } else if (ke->key() != Qt::Key_Delete) {
+                }
+                else if (ke->key() != Qt::Key_Delete) {
                     // Don't intercept Delete key - let it be handled by the main window action
                     filterBar_->keyPressed(ke);
                 }
-            } else if (ke->key() == Qt::Key_Backspace && ke->modifiers() == Qt::NoModifier) {
+            }
+            else if (ke->key() == Qt::Key_Backspace && ke->modifiers() == Qt::NoModifier) {
                 Q_EMIT backspacePressed();
             }
         }
-    } else if (watched == folderView_->childView()->viewport() && event->type() == QEvent::ToolTip) {
+    }
+    else if (watched == folderView_->childView()->viewport() && event->type() == QEvent::ToolTip) {
         return true;
     }
     return QWidget::eventFilter(watched, event);
@@ -323,7 +329,8 @@ void TabPage::onFilterStringChanged(QString str) {
                     folderView()->childView()->setFocus();
                     filterBar_->hide();
                 }
-            } else if (!str.isEmpty()) {
+            }
+            else if (!str.isEmpty()) {
                 filterBar_->show();
             }
         }
@@ -408,7 +415,8 @@ void TabPage::onUiUpdated() {
             QModelIndex index = folderView_->childView()->indexAt(pos);
             if (index.isValid()) {
                 folderView_->setCursor(Qt::PointingHandCursor);
-            } else {
+            }
+            else {
                 folderView_->setCursor(Qt::ArrowCursor);
             }
         });
@@ -433,10 +441,12 @@ void TabPage::onFilesAdded(Fm::FileInfoList files) {
             if (folderView_->selectFiles(files, false)) {
                 selectionTimer_->start(kSelectionDelay);
             }
-        } else if (folderView_->selectFiles(files, selectionTimer_->isActive())) {
+        }
+        else if (folderView_->selectFiles(files, selectionTimer_->isActive())) {
             selectionTimer_->start(kSelectionDelay);
         }
-    } else if (!folderView_->selectionModel()->currentIndex().isValid()) {
+    }
+    else if (!folderView_->selectionModel()->currentIndex().isValid()) {
         // set the first item as current if there is no current item
         QModelIndex firstIndx = proxyModel_->index(0, 0);
         if (firstIndx.isValid()) {
@@ -464,19 +474,24 @@ void TabPage::localizeTitle(const Fm::FilePath& path) {
     if (!path.isNative()) {
         if (path.hasUriScheme("search")) {
             title_ = tr("Search Results");
-        } else if (strcmp(path.toString().get(), "menu://applications/") == 0) {
+        }
+        else if (strcmp(path.toString().get(), "menu://applications/") == 0) {
             title_ = tr("Applications");
-        } else if (!path.hasParent()) {
+        }
+        else if (!path.hasParent()) {
             if (path.hasUriScheme("computer")) {
                 title_ = tr("Computer");
-            } else if (path.hasUriScheme("network")) {
+            }
+            else if (path.hasUriScheme("network")) {
                 title_ = tr("Network");
-            } else if (path.hasUriScheme("trash")) {
+            }
+            else if (path.hasUriScheme("trash")) {
                 title_ = tr("Trash");
             }
         }
-    } else if (QString::fromUtf8(path.toString().get()) ==
-               QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)) {
+    }
+    else if (QString::fromUtf8(path.toString().get()) ==
+             QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)) {
         title_ = tr("Desktop");
     }
 }
@@ -541,7 +556,8 @@ void TabPage::onFolderFsInfo() {
     if (folder_->getFilesystemInfo(&total, &free)) {
         msg = tr("Free space: %1 (Total: %2)")
                   .arg(formatFileSize(free, fm_config->si_unit), formatFileSize(total, fm_config->si_unit));
-    } else {
+    }
+    else {
         msg.clear();
     }
     Q_EMIT statusChanged(StatusTextFSInfo, msg);
@@ -576,7 +592,8 @@ void TabPage::onFolderRemoved() {
 
     if (settings.closeOnUnmount()) {
         QTimer::singleShot(0, this, &TabPage::deleteLater);
-    } else {
+    }
+    else {
         chdir(Fm::FilePath::homeDir());
     }
 }
@@ -587,7 +604,8 @@ void TabPage::onFolderUnmount() {
 
     if (appSettings().closeOnUnmount()) {
         freeFolder();
-    } else if (folder_) {
+    }
+    else if (folder_) {
         // the folder shouldn't be freed here because the dir will be changed by
         // the slot of MainWindow but it should be disconnected from all signals
         disconnect(folder_.get(), nullptr, this, nullptr);
@@ -696,18 +714,25 @@ void TabPage::chdir(Fm::FilePath newPath, bool addHistory) {
         onFolderStartLoading();
         onFolderFinishLoading();
         onFolderFsInfo();
-    } else {
+    }
+    else {
         onFolderStartLoading();
     }
 
     changingDir_ = false;
 }
 
-void TabPage::selectAll() { folderView_->selectAll(); }
+void TabPage::selectAll() {
+    folderView_->selectAll();
+}
 
-void TabPage::deselectAll() { folderView_->selectionModel()->clearSelection(); }
+void TabPage::deselectAll() {
+    folderView_->selectionModel()->clearSelection();
+}
 
-void TabPage::invertSelection() { folderView_->invertSelection(); }
+void TabPage::invertSelection() {
+    folderView_->invertSelection();
+}
 
 void TabPage::reload() {
     if (folder_) {
@@ -738,7 +763,8 @@ void TabPage::onSelChanged() {
     if (numSel == 1) {
         /* only one file is selected (delegated to helper function) */
         msg = formatSingleFileStatus(files.front(), appSettings());
-    } else {
+    }
+    else {
         goffset sum;
         msg = tr("%n item(s) selected", nullptr, numSel);
 
@@ -913,10 +939,12 @@ void TabPage::applyFilter() {
         QModelIndex curIndex = folderView_->selectionModel()->currentIndex();
         if (curIndex.isValid()) {
             folderView_->childView()->scrollTo(curIndex, QAbstractItemView::EnsureVisible);
-        } else if (firstIndx.isValid()) {
+        }
+        else if (firstIndx.isValid()) {
             folderView_->selectionModel()->setCurrentIndex(firstIndx, QItemSelectionModel::NoUpdate);
         }
-    } else {
+    }
+    else {
         bool selectionMade = false;
 
         // preselect an appropriate item if the filter-bar is transient
@@ -927,7 +955,8 @@ void TabPage::applyFilter() {
                     folderView_->childView()->setCurrentIndex(indexList.at(0));
                     selectionMade = true;
                 }
-            } else if (!folderView_->selectionModel()->isSelected(firstIndx)) {
+            }
+            else if (!folderView_->selectionModel()->isSelected(firstIndx)) {
                 folderView_->childView()->setCurrentIndex(firstIndx);
                 selectionMade = true;
             }
@@ -940,7 +969,8 @@ void TabPage::applyFilter() {
         QModelIndex curIndex = folderView_->selectionModel()->currentIndex();
         if (curIndex.isValid()) {
             folderView_->childView()->scrollTo(curIndex, QAbstractItemView::EnsureVisible);
-        } else {
+        }
+        else {
             QModelIndexList selIndexes = folderView_->selectionModel()->selectedIndexes();
             curIndex = selIndexes.isEmpty() ? firstIndx : selIndexes.last();
             if (curIndex.isValid()) {
@@ -964,7 +994,8 @@ void TabPage::setCustomizedView(bool value, bool recursive) {
         folderSettings_.setCustomized(value);
         folderSettings_.setRecursive(recursive);
         settings.saveFolderSettings(path(), folderSettings_);
-    } else {
+    }
+    else {
         settings.clearFolderSettings(path());
         folderSettings_ = settings.loadFolderSettings(path());
 

@@ -49,7 +49,8 @@ bool GioTrashBackend::restore(const QString& trashId, QString* errorOut) {
     GFile* trashedFile = nullptr;
     if (trashId.startsWith(QStringLiteral("trash://"))) {
         trashedFile = g_file_new_for_uri(utf8Id.constData());
-    } else {
+    }
+    else {
         trashedFile = g_file_new_for_path(utf8Id.constData());
     }
 
@@ -70,7 +71,8 @@ bool GioTrashBackend::restore(const QString& trashId, QString* errorOut) {
                 *errorOut = QString::fromUtf8(error->message);
             }
             g_error_free(error);
-        } else if (errorOut) {
+        }
+        else if (errorOut) {
             *errorOut = QStringLiteral("Failed to query trash metadata for: %1").arg(trashId);
         }
 
@@ -113,7 +115,8 @@ bool GioTrashBackend::restore(const QString& trashId, QString* errorOut) {
                 *errorOut = QString::fromUtf8(error->message);
             }
             g_error_free(error);
-        } else if (errorOut) {
+        }
+        else if (errorOut) {
             *errorOut = QStringLiteral("Failed to restore trashed item to original location");
         }
     }
