@@ -33,6 +33,8 @@ Concretely:
 * **No libfm / libfm-qt anywhere in the build**
 * **Backends are swappable** behind narrow interfaces in `src/core/`
 
+> Keep this document live. Every time architecture or backend decisions change, update this guide and sync the current TODO list so contributors can act on it. Treat `HACKING.md` + `TODO.md` as working documents, not snapshots.
+
 ## 3. Target Architecture
 
 ### 3.1 Directory Layout
@@ -441,4 +443,3 @@ When touching old code that still references libfm/libfm-qt:
 ## 10. License
 
 PCManFM-Qt is licensed under the GPLv2 or any later version. See the `LICENSE` file for details.
-
