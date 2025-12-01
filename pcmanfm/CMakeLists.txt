@@ -40,6 +40,9 @@ set(pcmanfm_SRCS
     ../src/ui/hexdocument.cpp
     ../src/ui/hexeditorview.cpp
     ../src/ui/hexeditorwindow.cpp
+    ../src/ui/binarydocument.cpp
+    ../src/ui/disasm_engine.cpp
+    ../src/ui/disasmmodel.cpp
     ../src/ui/disassemblywindow.cpp
     ../src/ui/fsqt.cpp
     ../src/core/ifoldermodel.h

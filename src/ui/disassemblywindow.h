@@ -9,14 +9,16 @@
 #include <QMainWindow>
 #include <QString>
 
+#include <memory>
 #include <optional>
 
-#include <capstone/capstone.h>
-
 class QLabel;
-class QPlainTextEdit;
+class QTableView;
 
 namespace PCManFM {
+
+class BinaryDocument;
+class DisasmModel;
 
 class DisassemblyWindow : public QMainWindow {
     Q_OBJECT
@@ -28,23 +30,14 @@ class DisassemblyWindow : public QMainWindow {
     bool openFile(const QString& path, QString& errorOut);
 
    private:
-    struct CapstoneConfig {
-        cs_arch arch = CS_ARCH_X86;
-        cs_mode mode = CS_MODE_64;
-        QString label;
-        quint64 baseAddress = 0;
-    };
-
     void setupUi();
-    std::optional<CapstoneConfig> detectConfig(const QByteArray& data) const;
-    CapstoneConfig defaultConfig() const;
-    quint64 parseElfEntry(const QByteArray& data, bool is64Bit, bool littleEndian) const;
-    bool disassemble(const QByteArray& data, const CapstoneConfig& cfg, QString& outText, QString& errorOut) const;
-    void updateLabels(const QString& path, const CapstoneConfig& cfg, bool truncated, qsizetype bytesRead);
+    bool refresh(quint64 offset = 0);
+    void updateLabels(const QString& path, bool truncated, qsizetype bytesRead);
 
-    QPlainTextEdit* output_ = nullptr;
+    std::unique_ptr<BinaryDocument> doc_;
+    std::unique_ptr<DisasmModel> model_;
+    QTableView* view_ = nullptr;
     QLabel* pathLabel_ = nullptr;
-    QLabel* configLabel_ = nullptr;
     QString currentPath_;
 };
 

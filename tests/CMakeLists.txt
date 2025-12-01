@@ -94,3 +94,45 @@ target_include_directories(pcmanfm-qt-archive-tests PRIVATE
 
 add_test(NAME pcmanfm-qt-archive-tests COMMAND pcmanfm-qt-archive-tests)
 set_tests_properties(pcmanfm-qt-archive-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# Windowed file reader tests
+add_executable(pcmanfm-qt-windowed-reader-tests
+    windowed_file_reader_test.cpp
+    ../src/core/windowed_file_reader.cpp
+)
+
+target_link_libraries(pcmanfm-qt-windowed-reader-tests
+    Qt6::Test
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+)
+
+target_include_directories(pcmanfm-qt-windowed-reader-tests PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+add_test(NAME pcmanfm-qt-windowed-reader-tests COMMAND pcmanfm-qt-windowed-reader-tests)
+set_tests_properties(pcmanfm-qt-windowed-reader-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# Disassembly engine tests
+add_executable(pcmanfm-qt-disasm-tests
+    disasm_engine_test.cpp
+    ../src/ui/disasm_engine.cpp
+)
+
+target_link_libraries(pcmanfm-qt-disasm-tests
+    Qt6::Test
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    ${CAPSTONE_LIBRARIES}
+)
+
+target_include_directories(pcmanfm-qt-disasm-tests PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CAPSTONE_INCLUDE_DIRS}
+)
+
+add_test(NAME pcmanfm-qt-disasm-tests COMMAND pcmanfm-qt-disasm-tests)
+set_tests_properties(pcmanfm-qt-disasm-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
