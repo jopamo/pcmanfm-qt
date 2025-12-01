@@ -25,6 +25,7 @@
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QObject>
 #include <QtGlobal>
 #include <memory>
 
@@ -221,6 +222,11 @@ void MainWindow::on_actionDelete_triggered() {
             return;
         }
 
+        // Keep the async backend alive until it finishes.
+        IFileOps* fileOpsPtr = fileOps.release();
+        fileOpsPtr->setParent(this);
+        connect(fileOpsPtr, &IFileOps::finished, fileOpsPtr, &QObject::deleteLater);
+
         FileOpRequest req;
         req.type = FileOpType::Delete;
         req.sources = filePathListToStringList(paths);
@@ -228,7 +234,7 @@ void MainWindow::on_actionDelete_triggered() {
         req.followSymlinks = false;
         req.overwriteExisting = false;
 
-        fileOps->start(req);
+        fileOpsPtr->start(req);
     }
 }
 
