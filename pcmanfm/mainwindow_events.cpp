@@ -107,6 +107,11 @@ void MainWindow::handleFocusIn(QWidget* watchedWidget) {
             if (viewFrame->palette().color(QPalette::Base) == qApp->palette().color(QPalette::Base)) {
                 viewFrame->setPalette(getInactivePalette(viewFrame->palette()));
             }
+
+            // Ensure selections are exclusive to the active frame
+            if (TabPage* page = currentPage(viewFrame)) {
+                page->deselectAll();
+            }
         }
     }
 }
