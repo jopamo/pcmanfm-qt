@@ -177,31 +177,61 @@ void MainWindow::on_actionNewWin_triggered() {
 void MainWindow::on_actionNewFolder_triggered() {
     if (TabPage* page = currentPage()) {
         bool ok = false;
+
         QString name =
+
             QInputDialog::getText(this, tr("New Folder"), tr("Folder Name:"), QLineEdit::Normal, tr("New Folder"), &ok);
+
         if (!ok || name.isEmpty())
             return;
 
+        // Use Qt for local file operations (Modernization Goal)
+
+        if (page->path().isNative()) {
+            QString dirPath = QString::fromUtf8(page->path().localPath().get());
+
+            QDir dir(dirPath);
+
+            if (!dir.mkdir(name)) {
+                QMessageBox::warning(this, tr("Error"), tr("Failed to create folder \"%1\"").arg(name));
+            }
+
+            return;
+        }
+
+        // Legacy fallback for non-native paths
+
         // Get a Folder object for the current directory
+
         // Fm::Folder::fromPath returns a std::shared_ptr<Fm::Folder>
+
         auto folder = Fm::Folder::fromPath(page->path());
+
         if (!folder) {
             QMessageBox::warning(this, tr("Error"), tr("Failed to access current folder"));
+
             return;
         }
 
         GError* err = nullptr;
+
         QByteArray utf8Name = name.toUtf8();
 
         // makeDirectory signature in libfm-qt6 core:
+
         // bool makeDirectory(const char* name, GError** error, GCancellable* cancellable = nullptr)
+
         if (!folder->makeDirectory(utf8Name.constData(), &err)) {
             QString msg = tr("Failed to create folder \"%1\"").arg(name);
+
             if (err) {
                 msg += QLatin1Char('\n');
+
                 msg += QString::fromUtf8(err->message);
+
                 g_error_free(err);
             }
+
             QMessageBox::warning(this, tr("Error"), msg);
         }
     }
