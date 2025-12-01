@@ -23,6 +23,8 @@ set(pcmanfm_SRCS
     connectserverdialog.cpp
     settings.cpp
     bulkrename.cpp
+    createlauncherdialog.cpp
+    hiddenshortcutsdialog.cpp
     # New backend files
     ../src/core/ifileops.cpp
     ../src/core/backend_registry.cpp
@@ -101,6 +103,7 @@ target_include_directories(pcmanfm-qt
         "${Qt6Gui_PRIVATE_INCLUDE_DIRS}"
         "${CMAKE_CURRENT_BINARY_DIR}/pcmanfm-qt_autogen/include"
         ${GIO_INCLUDE_DIRS}
+        pcmanfm
 )
 
 target_link_libraries(pcmanfm-qt

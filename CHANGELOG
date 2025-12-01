@@ -3,6 +3,10 @@ Unreleased
  * Fixed a conflict between the "Delete" key shortcut and the standard delete action.
  * Modernized "New Folder" creation to use standard Qt APIs for local filesystems, removing legacy libfm fallbacks.
  * Fixed duplicate signal connections for main window actions which could cause double-triggering.
+ * Implemented "Create Launcher" dialog (replacing placeholder).
+ * Implemented "Hidden Shortcuts" dialog (replacing placeholder).
+ * Cleaned up unused actions in UI file (Close Left/Right/Other tabs) which are handled dynamically in context menus.
+ * Connected "Quit" action to application exit.
 
 pcmanfm-qt-2.3.0 / 2025-11-05
 ==============================

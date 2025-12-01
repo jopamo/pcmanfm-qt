@@ -5,6 +5,8 @@
 
 #include "mainwindow.h"
 
+#include "createlauncherdialog.h"
+#include "hiddenshortcutsdialog.h"
 #include "application.h"
 #include "settings.h"
 #include "tabpage.h"
@@ -122,6 +124,8 @@ MainWindow::MainWindow(Fm::FilePath path)
 
     setWindowTitle(QStringLiteral("PCManFM-Qt"));
 
+    connect(ui.actionQuit, &QAction::triggered, qApp, &QApplication::quit);
+
     lastActive_ = this;
 }
 
@@ -230,8 +234,37 @@ void MainWindow::on_actionNewBlankFile_triggered() {
 
 void MainWindow::on_actionCreateLauncher_triggered() {
     if (TabPage* page = currentPage()) {
-        Q_UNUSED(page);
-        // Implementation placeholder
+        CreateLauncherDialog dialog(this);  // No qualifier needed
+        if (dialog.exec() == QDialog::Accepted) {
+            QString name = dialog.launcherName();
+            QString command = dialog.launcherCommand();
+
+            if (name.isEmpty() || command.isEmpty()) {
+                QMessageBox::warning(this, tr("Create Launcher Failed"), tr("Name and Command cannot be empty."));
+                return;
+            }
+
+            // Correctly convert Fm::FilePath to a local file path string
+            QString currentDirPath = QString::fromUtf8(page->path().localPath().get());
+            QString filePath = currentDirPath + QStringLiteral("/") + name + QStringLiteral(".desktop");
+            QFile file(filePath);
+            if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                QTextStream out(&file);
+                out << "[Desktop Entry]\n";
+                out << "Version=1.0\n";
+                out << "Type=Application\n";
+                out << "Name=" << name << "\n";
+                out << "Exec=" << command << "\n";
+                out << "Terminal=false\n";  // Assume graphical application by default
+                file.close();
+                QMessageBox::information(this, tr("Launcher Created"),
+                                         tr("Launcher '%1.desktop' created successfully.").arg(name));
+            }
+            else {
+                QMessageBox::warning(this, tr("Create Launcher Failed"),
+                                     tr("Failed to create launcher file '%1': %2").arg(name, file.errorString()));
+            }
+        }
     }
 }
 
@@ -399,7 +432,8 @@ void MainWindow::tabContextMenu(const QPoint& pos) {
 }
 
 void MainWindow::on_actionHiddenShortcuts_triggered() {
-    // Placeholder for hidden shortcuts help dialog
+    HiddenShortcutsDialog dialog(this);
+    dialog.exec();
 }
 
 void MainWindow::onShortcutPrevTab() {

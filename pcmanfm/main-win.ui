@@ -842,29 +842,6 @@
     <string>Ctrl+Shift+K</string>
    </property>
   </action>
-  <action name="actionCloseLeft">
-   <property name="icon">
-    <iconset theme="go-previous">
-     <normaloff>.</normaloff>.</iconset>
-   </property>
-   <property name="text">
-    <string>Close &amp;previous tabs</string>
-   </property>
-  </action>
-  <action name="actionCloseRight">
-   <property name="icon">
-    <iconset theme="go-next">
-     <normaloff>.</normaloff>.</iconset>
-   </property>
-   <property name="text">
-    <string>Close &amp;next tabs</string>
-   </property>
-  </action>
-  <action name="actionCloseOther">
-   <property name="text">
-    <string>Close &amp;other tabs</string>
-   </property>
-  </action>
   <action name="actionMenu_bar">
    <property name="checkable">
     <bool>true</bool>
