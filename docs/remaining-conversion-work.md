@@ -253,9 +253,10 @@ target_compile_definitions(pcmanfm-qt
    - Support custom actions
 
 2. **Complete File Operations**
-   - Ensure all file operations use IFileOps
-   - Implement progress reporting
-   - Support cancellation
+   - [x] Modernize "New Folder" creation (Qt-native for local paths)
+   - [ ] Ensure all file operations use IFileOps
+   - [ ] Implement progress reporting
+   - [ ] Support cancellation
 
 ### Phase 4: Specialized Features (Lower Priority)
 

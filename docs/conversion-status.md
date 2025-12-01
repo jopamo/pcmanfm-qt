@@ -10,6 +10,7 @@
 - GIO backend implementations (trash, volume, remote)
 - Backend registry system
 - Basic build system integration
+- Modernized "New Folder" creation in MainWindow (Qt-based for local paths)
 
 ### ❌ Major Dependencies Remaining
 
@@ -98,5 +99,5 @@ target_compile_definitions(pcmanfm-qt LIBFM_DATA_DIR=...)
 
 ---
 
-*Last Updated: 2025-11-29*
+*Last Updated: 2025-11-30*
 *See `remaining-conversion-work.md` for detailed breakdown*
