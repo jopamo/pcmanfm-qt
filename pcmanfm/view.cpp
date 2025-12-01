@@ -46,6 +46,7 @@
 #include "../src/ui/archivejob.h"
 #include "../src/ui/archiveextractjob.h"
 #include "../src/ui/hexeditorwindow.h"
+#include "../src/ui/disassemblywindow.h"
 
 namespace PCManFM {
 
@@ -246,6 +247,46 @@ void View::onOpenInHexEditor() {
     }
     editor->resize(900, 600);
     editor->show();
+}
+
+void View::onDisassembleWithCapstone() {
+    auto* menu = qobject_cast<Fm::FileMenu*>(sender()->parent());
+    if (!menu) {
+        return;
+    }
+
+    const auto files = menu->files();
+    if (files.size() != 1 || !files.front()) {
+        QMessageBox::warning(window(), tr("Disassembly"), tr("Select a single file to disassemble."));
+        return;
+    }
+
+    const auto& file = files.front();
+    if (file->isDir()) {
+        QMessageBox::warning(window(), tr("Disassembly"), tr("Disassembly is only available for files."));
+        return;
+    }
+    if (!file->isNative()) {
+        QMessageBox::warning(window(), tr("Disassembly"), tr("Only local files can be disassembled."));
+        return;
+    }
+
+    const auto localPath = file->path().localPath();
+    if (!localPath) {
+        QMessageBox::warning(window(), tr("Disassembly"), tr("Unable to resolve local path for selection."));
+        return;
+    }
+
+    auto* viewer = new DisassemblyWindow();
+    QString error;
+    if (!viewer->openFile(QString::fromUtf8(localPath.get()), error)) {
+        QMessageBox::warning(window(), tr("Disassembly"), error.isEmpty() ? tr("Failed to disassemble file.") : error);
+        viewer->deleteLater();
+        return;
+    }
+
+    viewer->resize(960, 720);
+    viewer->show();
 }
 
 void View::onCalculateBlake3() {
@@ -562,6 +603,11 @@ void View::prepareFileMenu(Fm::FileMenu* menu) {
             auto* action = new QAction(QIcon::fromTheme(QStringLiteral("accessories-calculator")),
                                        tr("Calculate BLAKE3 Checksum"), menu);
             connect(action, &QAction::triggered, this, &View::onCalculateBlake3);
+            menu->insertAction(menu->separator3(), action);
+
+            action = new QAction(QIcon::fromTheme(QStringLiteral("application-x-executable")),
+                                 tr("Disassemble (Capstone)"), menu);
+            connect(action, &QAction::triggered, this, &View::onDisassembleWithCapstone);
             menu->insertAction(menu->separator3(), action);
 
             action = new QAction(QIcon::fromTheme(QStringLiteral("accessories-text-editor")), tr("Open in Hex Editor"),

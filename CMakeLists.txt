@@ -31,6 +31,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GIO REQUIRED gio-2.0)
 pkg_check_modules(BLAKE3 REQUIRED blake3)
 pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
+pkg_check_modules(CAPSTONE REQUIRED capstone)
 
 message(STATUS "Building ${PROJECT_NAME} with Qt ${Qt6Core_VERSION}")
 

@@ -13,6 +13,8 @@
 #include <cstring>
 #include <limits>
 #include <cstddef>
+#include <string>
+#include <exception>
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -49,13 +51,6 @@ HexDocument::HexDocument(QObject* parent) : QObject(parent) {}
 
 HexDocument::~HexDocument() {
     closeDescriptor(sourceFd_);
-}
-
-void HexDocument::enforceCacheLimit() const {
-    while ((pageCache_.size() > kMaxCachedPages || currentCacheBytes_ > kMaxCacheBytes) && !pageCache_.empty()) {
-        currentCacheBytes_ -= static_cast<std::size_t>(pageCache_.front().data.size());
-        pageCache_.pop_front();
-    }
 }
 
 bool HexDocument::loadStat(const QString& path, FileStat& st, QString& errorOut) const {
@@ -95,15 +90,15 @@ void HexDocument::closeDescriptor(int& fd) const {
 }
 
 bool HexDocument::openFile(const QString& path, QString& errorOut) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     closeDescriptor(sourceFd_);
     segments_.clear();
     addedBuffer_.clear();
     undoStack_.clear();
     redoStack_.clear();
-    pageCache_.clear();
-    currentCacheBytes_ = 0;
     totalSize_ = 0;
     dirty_ = false;
+    reader_.reset();
 
     FileStat st;
     if (!loadStat(path, st, errorOut)) {
@@ -124,6 +119,15 @@ bool HexDocument::openFile(const QString& path, QString& errorOut) {
         return false;
     }
 
+    std::string readerErr;
+    reader_ = std::make_unique<WindowedFileReader>(path.toStdString(), kReadWindowSize, &readerErr);
+    if (!reader_ || !reader_->valid()) {
+        errorOut = QString::fromLocal8Bit(readerErr.c_str());
+        ::close(fd);
+        reader_.reset();
+        return false;
+    }
+
     sourceFd_ = fd;
     path_ = path;
     initialStat_ = st;
@@ -139,6 +143,7 @@ bool HexDocument::openFile(const QString& path, QString& errorOut) {
         segments_.push_back(seg);
     }
 
+    lock.unlock();
     Q_EMIT changed();
     return true;
 }
@@ -239,74 +244,34 @@ bool HexDocument::appendAddedData(const QByteArray& data, std::uint64_t& startOf
 }
 
 bool HexDocument::readOriginal(std::uint64_t offset, std::uint64_t length, QByteArray& out, QString& errorOut) const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    return readOriginalUnlocked(offset, length, out, errorOut);
+}
+
+bool HexDocument::readOriginalUnlocked(std::uint64_t offset,
+                                       std::uint64_t length,
+                                       QByteArray& out,
+                                       QString& errorOut) const {
     if (length == 0) {
         out.clear();
         return true;
     }
-    if (sourceFd_ < 0) {
-        errorOut = tr("Source file descriptor is not available.");
+    if (!reader_) {
+        errorOut = tr("File reader is not available.");
         return false;
     }
+
     out.resize(static_cast<int>(length));
-    std::size_t filled = 0;
-
-    while (filled < static_cast<std::size_t>(length)) {
-        const std::uint64_t absOffset = offset + filled;
-        const std::uint64_t pageStart = absOffset - (absOffset % kPageSize);
-        const std::size_t pageOffset = static_cast<std::size_t>(absOffset - pageStart);
-
-        // Locate cached page
-        auto it = std::find_if(pageCache_.begin(), pageCache_.end(),
-                               [pageStart](const Page& p) { return p.offset == pageStart; });
-
-        if (it == pageCache_.end()) {
-            Page page;
-            page.offset = pageStart;
-            page.data.resize(static_cast<int>(kPageSize));
-
-            ssize_t n = ::pread(sourceFd_, page.data.data(), kPageSize, static_cast<off_t>(pageStart));
-            if (n < 0) {
-                if (errno == EINTR) {
-                    continue;
-                }
-                errorOut = errnoString("pread");
-                return false;
-            }
-            if (n < static_cast<ssize_t>(kPageSize)) {
-                page.data.resize(static_cast<int>(std::max<ssize_t>(0, n)));
-            }
-
-            const std::size_t pageBytes = static_cast<std::size_t>(page.data.size());
-            pageCache_.push_back(std::move(page));
-            currentCacheBytes_ += pageBytes;
-            enforceCacheLimit();
-            it = pageCache_.end();
-            --it;
-        }
-        else {
-            // Move recently used page to the back (simple LRU)
-            Page page = std::move(*it);
-            pageCache_.erase(it);
-            pageCache_.push_back(std::move(page));
-            it = pageCache_.end();
-            --it;
-        }
-
-        const QByteArray& pageData = it->data;
-        const std::size_t avail = static_cast<std::size_t>(pageData.size()) > pageOffset
-                                      ? static_cast<std::size_t>(pageData.size()) - pageOffset
-                                      : 0;
-        if (avail == 0) {
-            // Beyond EOF
-            std::memset(out.data() + filled, 0, length - filled);
-            break;
-        }
-
-        const std::size_t toCopy = std::min<std::size_t>(avail, length - filled);
-        std::memcpy(out.data() + static_cast<int>(filled), pageData.constData() + pageOffset, toCopy);
-        filled += toCopy;
+    std::size_t bytesRead = 0;
+    std::string err;
+    if (!reader_->read(offset, static_cast<std::size_t>(length), reinterpret_cast<std::uint8_t*>(out.data()), bytesRead,
+                       err)) {
+        errorOut = QString::fromLocal8Bit(err.c_str());
+        return false;
     }
-
+    if (bytesRead < static_cast<std::size_t>(length)) {
+        out.resize(static_cast<int>(bytesRead));
+    }
     return true;
 }
 
@@ -315,15 +280,17 @@ bool HexDocument::readFromSegments(std::uint64_t offset,
                                    QByteArray& out,
                                    QString& errorOut) const {
     std::vector<bool> modified;
-    return readBytesWithMarkers(offset, length, out, modified, errorOut);
+    return readBytesWithMarkersUnlocked(offset, length, out, modified, errorOut);
 }
 
 bool HexDocument::readBytes(std::uint64_t offset, std::uint64_t length, QByteArray& out, QString& errorOut) const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     std::vector<bool> modified;
-    return readBytesWithMarkers(offset, length, out, modified, errorOut);
+    return readBytesWithMarkersUnlocked(offset, length, out, modified, errorOut);
 }
 
 bool HexDocument::hasExternalChange(bool& changed, QString& errorOut) const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     changed = false;
     if (path_.isEmpty()) {
         return true;
@@ -338,6 +305,7 @@ bool HexDocument::hasExternalChange(bool& changed, QString& errorOut) const {
 }
 
 bool HexDocument::currentFingerprint(quint64& fingerprintOut, QString& errorOut) const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     fingerprintOut = 0;
     if (path_.isEmpty()) {
         return false;
@@ -352,11 +320,13 @@ bool HexDocument::currentFingerprint(quint64& fingerprintOut, QString& errorOut)
 }
 
 bool HexDocument::reload(QString& errorOut) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     if (path_.isEmpty()) {
         errorOut = tr("No file is currently open.");
         return false;
     }
     const bool ok = rebuildFromCurrentFile(errorOut);
+    lock.unlock();
     if (ok) {
         Q_EMIT changed();
     }
@@ -368,6 +338,15 @@ bool HexDocument::readBytesWithMarkers(std::uint64_t offset,
                                        QByteArray& out,
                                        std::vector<bool>& modified,
                                        QString& errorOut) const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    return readBytesWithMarkersUnlocked(offset, length, out, modified, errorOut);
+}
+
+bool HexDocument::readBytesWithMarkersUnlocked(std::uint64_t offset,
+                                               std::uint64_t length,
+                                               QByteArray& out,
+                                               std::vector<bool>& modified,
+                                               QString& errorOut) const {
     if (offset >= totalSize_) {
         out.clear();
         return true;
@@ -394,7 +373,7 @@ bool HexDocument::readBytesWithMarkers(std::uint64_t offset,
 
         if (seg.kind == Segment::Kind::Original) {
             QByteArray chunk;
-            if (!readOriginal(seg.sourceOffset + localStart, toCopy, chunk, errorOut)) {
+            if (!readOriginalUnlocked(seg.sourceOffset + localStart, toCopy, chunk, errorOut)) {
                 return false;
             }
             std::memcpy(out.data() + static_cast<int>(outPos), chunk.constData(), static_cast<std::size_t>(toCopy));
@@ -465,7 +444,6 @@ bool HexDocument::applyOperation(const Operation& op, bool recordUndo, QString& 
     }
 
     dirty_ = true;
-    Q_EMIT changed();
     return true;
 }
 
@@ -500,6 +478,7 @@ bool HexDocument::applyInverseAndPushRedo(const Operation& op, QString& errorOut
 }
 
 bool HexDocument::overwrite(std::uint64_t offset, const QByteArray& data, QString& errorOut) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     if (data.isEmpty()) {
         return true;
     }
@@ -522,10 +501,16 @@ bool HexDocument::overwrite(std::uint64_t offset, const QByteArray& data, QStrin
     op.oldData = oldData;
     op.newData = data;
 
-    return applyOperation(op, /*recordUndo=*/true, errorOut);
+    const bool ok = applyOperation(op, /*recordUndo=*/true, errorOut);
+    lock.unlock();
+    if (ok) {
+        Q_EMIT changed();
+    }
+    return ok;
 }
 
 bool HexDocument::insert(std::uint64_t offset, const QByteArray& data, QString& errorOut) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     if (data.isEmpty()) {
         return true;
     }
@@ -538,10 +523,16 @@ bool HexDocument::insert(std::uint64_t offset, const QByteArray& data, QString& 
     op.type = OperationType::Insert;
     op.offset = offset;
     op.newData = data;
-    return applyOperation(op, /*recordUndo=*/true, errorOut);
+    const bool ok = applyOperation(op, /*recordUndo=*/true, errorOut);
+    lock.unlock();
+    if (ok) {
+        Q_EMIT changed();
+    }
+    return ok;
 }
 
 bool HexDocument::erase(std::uint64_t offset, std::uint64_t length, QString& errorOut) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     if (length == 0) {
         return true;
     }
@@ -559,31 +550,56 @@ bool HexDocument::erase(std::uint64_t offset, std::uint64_t length, QString& err
     op.offset = offset;
     op.oldData = oldData;
 
-    return applyOperation(op, /*recordUndo=*/true, errorOut);
+    const bool ok = applyOperation(op, /*recordUndo=*/true, errorOut);
+    lock.unlock();
+    if (ok) {
+        Q_EMIT changed();
+    }
+    return ok;
 }
 
 bool HexDocument::undo(QString& errorOut) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     if (undoStack_.empty()) {
         return true;
     }
     const Operation op = undoStack_.back();
     undoStack_.pop_back();
-    return applyInverseAndPushRedo(op, errorOut);
+    const bool ok = applyInverseAndPushRedo(op, errorOut);
+    lock.unlock();
+    if (ok) {
+        Q_EMIT changed();
+    }
+    return ok;
 }
 
 bool HexDocument::redo(QString& errorOut) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     if (redoStack_.empty()) {
         return true;
     }
     const Operation op = redoStack_.back();
     redoStack_.pop_back();
-    return applyOperation(op, /*recordUndo=*/true, errorOut, /*clearRedo=*/false);
+    const bool ok = applyOperation(op, /*recordUndo=*/true, errorOut, /*clearRedo=*/false);
+    lock.unlock();
+    if (ok) {
+        Q_EMIT changed();
+    }
+    return ok;
 }
 
 bool HexDocument::findForward(const QByteArray& needle,
                               std::uint64_t startOffset,
                               std::uint64_t& foundOffset,
                               QString& errorOut) const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    return findForwardUnlocked(needle, startOffset, foundOffset, errorOut);
+}
+
+bool HexDocument::findForwardUnlocked(const QByteArray& needle,
+                                      std::uint64_t startOffset,
+                                      std::uint64_t& foundOffset,
+                                      QString& errorOut) const {
     foundOffset = 0;
     if (needle.isEmpty()) {
         errorOut = tr("Search pattern cannot be empty.");
@@ -620,6 +636,14 @@ bool HexDocument::findBackward(const QByteArray& needle,
                                std::uint64_t startOffset,
                                std::uint64_t& foundOffset,
                                QString& errorOut) const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    return findBackwardUnlocked(needle, startOffset, foundOffset, errorOut);
+}
+
+bool HexDocument::findBackwardUnlocked(const QByteArray& needle,
+                                       std::uint64_t startOffset,
+                                       std::uint64_t& foundOffset,
+                                       QString& errorOut) const {
     foundOffset = 0;
     if (needle.isEmpty()) {
         errorOut = tr("Search pattern cannot be empty.");
@@ -658,6 +682,13 @@ bool HexDocument::findBackward(const QByteArray& needle,
 }
 
 bool HexDocument::findAll(const QByteArray& needle, std::vector<std::uint64_t>& offsets, QString& errorOut) const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    return findAllUnlocked(needle, offsets, errorOut);
+}
+
+bool HexDocument::findAllUnlocked(const QByteArray& needle,
+                                  std::vector<std::uint64_t>& offsets,
+                                  QString& errorOut) const {
     offsets.clear();
     if (needle.isEmpty()) {
         errorOut = tr("Search pattern cannot be empty.");
@@ -666,7 +697,7 @@ bool HexDocument::findAll(const QByteArray& needle, std::vector<std::uint64_t>& 
     std::uint64_t pos = 0;
     while (pos < totalSize_) {
         std::uint64_t found = 0;
-        if (!findForward(needle, pos, found, errorOut)) {
+        if (!findForwardUnlocked(needle, pos, found, errorOut)) {
             if (!errorOut.isEmpty()) {
                 return false;
             }
@@ -679,6 +710,16 @@ bool HexDocument::findAll(const QByteArray& needle, std::vector<std::uint64_t>& 
 }
 
 bool HexDocument::isModified(std::uint64_t offset) const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    return isModifiedUnlocked(offset);
+}
+
+bool HexDocument::nextModifiedOffset(std::uint64_t startOffset, bool forward, std::uint64_t& foundOffset) const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    return nextModifiedOffsetUnlocked(startOffset, forward, foundOffset);
+}
+
+bool HexDocument::isModifiedUnlocked(std::uint64_t offset) const {
     if (offset >= totalSize_) {
         return false;
     }
@@ -692,7 +733,9 @@ bool HexDocument::isModified(std::uint64_t offset) const {
     return false;
 }
 
-bool HexDocument::nextModifiedOffset(std::uint64_t startOffset, bool forward, std::uint64_t& foundOffset) const {
+bool HexDocument::nextModifiedOffsetUnlocked(std::uint64_t startOffset,
+                                             bool forward,
+                                             std::uint64_t& foundOffset) const {
     foundOffset = 0;
     if (segments_.empty()) {
         return false;
@@ -748,7 +791,7 @@ bool HexDocument::streamLogicalToFd(int fd, QString& errorOut) const {
             const std::size_t chunk = static_cast<std::size_t>(std::min<std::uint64_t>(remaining, sizeof(buffer)));
             QByteArray data;
             if (seg.kind == Segment::Kind::Original) {
-                if (!readOriginal(offset, chunk, data, errorOut)) {
+                if (!readOriginalUnlocked(offset, chunk, data, errorOut)) {
                     return false;
                 }
             }
@@ -823,6 +866,33 @@ bool HexDocument::detectExternalChange(QString& errorOut) const {
 }
 
 bool HexDocument::save(QString& errorOut, bool ignoreExternalChange) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
+    const bool ok = saveInternal(errorOut, ignoreExternalChange);
+    lock.unlock();
+    if (ok) {
+        Q_EMIT saved();
+        Q_EMIT changed();
+    }
+    return ok;
+}
+
+bool HexDocument::saveAs(const QString& newPath, QString& errorOut) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
+    const QString oldPath = path_;
+    path_ = newPath;
+    const bool ok = saveInternal(errorOut, /*ignoreExternalChange=*/true);
+    if (!ok) {
+        path_ = oldPath;
+    }
+    lock.unlock();
+    if (ok) {
+        Q_EMIT saved();
+        Q_EMIT changed();
+    }
+    return ok;
+}
+
+bool HexDocument::saveInternal(QString& errorOut, bool ignoreExternalChange) {
     if (path_.isEmpty()) {
         errorOut = tr("No file is currently open.");
         return false;
@@ -892,24 +962,13 @@ bool HexDocument::save(QString& errorOut, bool ignoreExternalChange) {
     return true;
 }
 
-bool HexDocument::saveAs(const QString& newPath, QString& errorOut) {
-    const QString oldPath = path_;
-    path_ = newPath;
-    if (!save(errorOut, /*ignoreExternalChange=*/true)) {
-        path_ = oldPath;
-        return false;
-    }
-    return true;
-}
-
 bool HexDocument::rebuildFromCurrentFile(QString& errorOut) {
     closeDescriptor(sourceFd_);
     segments_.clear();
     addedBuffer_.clear();
     undoStack_.clear();
     redoStack_.clear();
-    pageCache_.clear();
-    currentCacheBytes_ = 0;
+    reader_.reset();
 
     FileStat st;
     if (!loadStat(path_, st, errorOut)) {
@@ -918,6 +977,13 @@ bool HexDocument::rebuildFromCurrentFile(QString& errorOut) {
 
     int fd = -1;
     if (!openDescriptor(path_, O_RDONLY | O_CLOEXEC | O_NOFOLLOW, fd, errorOut)) {
+        return false;
+    }
+
+    std::string readerErr;
+    reader_ = std::make_unique<WindowedFileReader>(path_.toStdString(), kReadWindowSize, &readerErr);
+    if (!reader_ || !reader_->valid()) {
+        errorOut = QString::fromLocal8Bit(readerErr.c_str());
         return false;
     }
 

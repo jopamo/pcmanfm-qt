@@ -33,12 +33,14 @@ set(pcmanfm_SRCS
     ../src/core/fs_ops.cpp
     ../src/core/archive_writer.cpp
     ../src/core/archive_extract.cpp
+    ../src/core/windowed_file_reader.cpp
     ../src/ui/filepropertiesdialog.cpp
     ../src/ui/archivejob.cpp
     ../src/ui/archiveextractjob.cpp
     ../src/ui/hexdocument.cpp
     ../src/ui/hexeditorview.cpp
     ../src/ui/hexeditorwindow.cpp
+    ../src/ui/disassemblywindow.cpp
     ../src/ui/fsqt.cpp
     ../src/core/ifoldermodel.h
 )
@@ -109,6 +111,7 @@ target_include_directories(pcmanfm-qt
         ${GIO_INCLUDE_DIRS}
         ${BLAKE3_INCLUDE_DIRS}
         ${LIBARCHIVE_INCLUDE_DIRS}
+        ${CAPSTONE_INCLUDE_DIRS}
         pcmanfm
 )
 
@@ -120,6 +123,7 @@ target_link_libraries(pcmanfm-qt
     ${GIO_LIBRARIES}
     ${BLAKE3_LIBRARIES}
     ${LIBARCHIVE_LIBRARIES}
+    ${CAPSTONE_LIBRARIES}
 )
 
 install(TARGETS pcmanfm-qt RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

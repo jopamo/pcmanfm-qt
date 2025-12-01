@@ -49,6 +49,7 @@ class View : public Fm::FolderView {
     void onOpenInTerminal();
     void onCalculateBlake3();
     void onOpenInHexEditor();
+    void onDisassembleWithCapstone();
     void onSearch();
 
    protected:

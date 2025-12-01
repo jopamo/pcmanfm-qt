@@ -9,13 +9,16 @@
 #include <QObject>
 #include <QByteArray>
 #include <QString>
+#include <memory>
+#include <shared_mutex>
 
 #include <cstdint>
-#include <deque>
 #include <optional>
 #include <vector>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include "../core/windowed_file_reader.h"
 
 namespace PCManFM {
 
@@ -86,11 +89,6 @@ class HexDocument : public QObject {
         std::uint64_t length = 0;
     };
 
-    struct Page {
-        std::uint64_t offset = 0;
-        QByteArray data;
-    };
-
     struct FileStat {
         dev_t dev = 0;
         ino_t ino = 0;
@@ -120,9 +118,26 @@ class HexDocument : public QObject {
 
     bool writeTempFile(const QString& destPath, QString& errorOut, QString& tempPathOut) const;
     bool streamLogicalToFd(int fd, QString& errorOut) const;
+    bool saveInternal(QString& errorOut, bool ignoreExternalChange);
     bool rebuildFromCurrentFile(QString& errorOut);
     bool detectExternalChange(QString& errorOut) const;
-    void enforceCacheLimit() const;
+    bool readOriginalUnlocked(std::uint64_t offset, std::uint64_t length, QByteArray& out, QString& errorOut) const;
+    bool readBytesWithMarkersUnlocked(std::uint64_t offset,
+                                      std::uint64_t length,
+                                      QByteArray& out,
+                                      std::vector<bool>& modified,
+                                      QString& errorOut) const;
+    bool findForwardUnlocked(const QByteArray& needle,
+                             std::uint64_t startOffset,
+                             std::uint64_t& foundOffset,
+                             QString& errorOut) const;
+    bool findBackwardUnlocked(const QByteArray& needle,
+                              std::uint64_t startOffset,
+                              std::uint64_t& foundOffset,
+                              QString& errorOut) const;
+    bool findAllUnlocked(const QByteArray& needle, std::vector<std::uint64_t>& offsets, QString& errorOut) const;
+    bool isModifiedUnlocked(std::uint64_t offset) const;
+    bool nextModifiedOffsetUnlocked(std::uint64_t startOffset, bool forward, std::uint64_t& foundOffset) const;
 
     int sourceFd_ = -1;
     QString path_;
@@ -133,11 +148,9 @@ class HexDocument : public QObject {
     std::vector<Segment> segments_;
     QByteArray addedBuffer_;
 
-    static constexpr std::size_t kPageSize = 16384;
-    static constexpr std::size_t kMaxCachedPages = 64;
-    static constexpr std::size_t kMaxCacheBytes = 16 * 1024 * 1024;  // cap memory use (~16 MiB of cached pages)
-    mutable std::deque<Page> pageCache_;
-    mutable std::size_t currentCacheBytes_ = 0;
+    static constexpr std::size_t kReadWindowSize = 8 * 1024 * 1024;  // 8 MiB sliding mmap window
+    std::unique_ptr<WindowedFileReader> reader_;
+    mutable std::shared_mutex mutex_;
 
     std::vector<Operation> undoStack_;
     std::vector<Operation> redoStack_;

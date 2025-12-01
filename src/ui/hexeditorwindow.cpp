@@ -22,6 +22,8 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QPlainTextEdit>
+#include <QFutureWatcher>
+#include <QtConcurrent>
 
 #include <algorithm>
 #include <cctype>
@@ -762,13 +764,50 @@ void HexEditorWindow::computeChecksums(bool selectionOnly) {
         return;
     }
 
-    QCryptographicHash sha256(QCryptographicHash::Sha256);
-    quint32 crc = 0xFFFFFFFFu;
+    struct ChecksumResult {
+        bool ok = false;
+        QString error;
+        quint32 crc = 0;
+        QByteArray sha;
+    };
 
-    QString error;
-    const bool ok = iterateRange(
-        start, length,
-        [&](const QByteArray& data) {
+    auto* watcher = new QFutureWatcher<ChecksumResult>(this);
+    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, start, length]() {
+        const auto result = watcher->future().result();
+        watcher->deleteLater();
+        if (!result.ok) {
+            if (!result.error.isEmpty()) {
+                QMessageBox::warning(this, tr("Checksum"), result.error);
+            }
+            return;
+        }
+        const QString message = tr("Range: 0x%1–0x%2 (%3 bytes)\nCRC32: %4\nSHA-256: %5")
+                                    .arg(start, 0, 16)
+                                    .arg(start + length, 0, 16)
+                                    .arg(length)
+                                    .arg(QStringLiteral("%1").arg(result.crc, 8, 16, QLatin1Char('0')).toUpper())
+                                    .arg(QString::fromLatin1(result.sha.toHex()));
+        QMessageBox::information(this, tr("Checksum"), message);
+    });
+
+    HexDocument* doc = doc_.get();
+    watcher->setFuture(QtConcurrent::run([doc, start, length]() -> ChecksumResult {
+        ChecksumResult res;
+        QCryptographicHash sha256(QCryptographicHash::Sha256);
+        quint32 crc = 0xFFFFFFFFu;
+        QString error;
+        QByteArray data;
+        const std::uint64_t kChunk = 2 * 1024 * 1024;
+        std::uint64_t remaining = length;
+        std::uint64_t pos = start;
+
+        while (remaining > 0) {
+            const std::uint64_t chunk = std::min<std::uint64_t>(remaining, kChunk);
+            if (!doc->readBytes(pos, chunk, data, error)) {
+                res.ok = false;
+                res.error = error;
+                return res;
+            }
             sha256.addData(data);
             for (unsigned char b : data) {
                 crc ^= b;
@@ -780,23 +819,16 @@ void HexEditorWindow::computeChecksums(bool selectionOnly) {
                     }
                 }
             }
-            return true;
-        },
-        error);
-    if (!ok) {
-        QMessageBox::warning(this, tr("Checksum"), error);
-        return;
-    }
+            remaining -= chunk;
+            pos += chunk;
+        }
 
-    crc ^= 0xFFFFFFFFu;
-    const QByteArray shaBytes = sha256.result().toHex();
-    const QString message = tr("Range: 0x%1–0x%2 (%3 bytes)\nCRC32: %4\nSHA-256: %5")
-                                .arg(start, 0, 16)
-                                .arg(start + length, 0, 16)
-                                .arg(length)
-                                .arg(QStringLiteral("%1").arg(crc, 8, 16, QLatin1Char('0')).toUpper())
-                                .arg(QString::fromLatin1(shaBytes));
-    QMessageBox::information(this, tr("Checksum"), message);
+        res.ok = true;
+        res.crc = crc ^ 0xFFFFFFFFu;
+        res.sha = sha256.result();
+        return res;
+    }));
+    statusBar()->showMessage(tr("Computing checksums…"), 2000);
 }
 
 void HexEditorWindow::computeByteStats(bool selectionOnly) {
@@ -815,60 +847,113 @@ void HexEditorWindow::computeByteStats(bool selectionOnly) {
         return;
     }
 
-    std::array<std::uint64_t, 256> counts{};
-    QString error;
-    const bool ok = iterateRange(
-        start, length,
-        [&](const QByteArray& data) {
-            for (unsigned char b : data) {
-                counts[b]++;
+    struct StatsPartial {
+        std::array<std::uint64_t, 256> counts{};
+        QString error;
+        bool ok = true;
+    };
+
+    struct StatsResult {
+        bool ok = true;
+        QString error;
+        std::array<std::uint64_t, 256> counts{};
+    };
+
+    std::vector<std::pair<std::uint64_t, std::uint64_t>> chunks;
+    const std::uint64_t kChunk = 2 * 1024 * 1024;
+    std::uint64_t pos = start;
+    std::uint64_t remaining = length;
+    while (remaining > 0) {
+        const std::uint64_t chunk = std::min<std::uint64_t>(remaining, kChunk);
+        chunks.emplace_back(pos, chunk);
+        pos += chunk;
+        remaining -= chunk;
+    }
+
+    auto* watcher = new QFutureWatcher<StatsResult>(this);
+    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, start, length]() {
+        const auto result = watcher->future().result();
+        watcher->deleteLater();
+        if (!result.ok) {
+            QMessageBox::warning(this, tr("Byte stats"), result.error);
+            return;
+        }
+
+        double entropy = 0.0;
+        for (std::uint64_t c : result.counts) {
+            if (c == 0) {
+                continue;
             }
-            return true;
-        },
-        error);
-    if (!ok) {
-        QMessageBox::warning(this, tr("Byte stats"), error);
-        return;
-    }
-
-    double entropy = 0.0;
-    for (std::uint64_t c : counts) {
-        if (c == 0) {
-            continue;
+            const double p = static_cast<double>(c) / static_cast<double>(length);
+            entropy -= p * std::log2(p);
         }
-        const double p = static_cast<double>(c) / static_cast<double>(length);
-        entropy -= p * std::log2(p);
-    }
 
-    QStringList lines;
-    lines << tr("Range: 0x%1–0x%2 (%3 bytes)").arg(start, 0, 16).arg(start + length, 0, 16).arg(length);
-    lines << tr("Entropy: %1 bits/byte").arg(entropy, 0, 'f', 4);
-    lines << QString();
-    for (int i = 0; i < 256; ++i) {
-        const std::uint64_t c = counts[static_cast<std::size_t>(i)];
-        if (c == 0) {
-            continue;
+        QStringList lines;
+        lines << tr("Range: 0x%1–0x%2 (%3 bytes)").arg(start, 0, 16).arg(start + length, 0, 16).arg(length);
+        lines << tr("Entropy: %1 bits/byte").arg(entropy, 0, 'f', 4);
+        lines << QString();
+        for (int i = 0; i < 256; ++i) {
+            const std::uint64_t c = result.counts[static_cast<std::size_t>(i)];
+            if (c == 0) {
+                continue;
+            }
+            const double p = static_cast<double>(c) / static_cast<double>(length);
+            lines << QStringLiteral("%1: %2 ( %3% )")
+                         .arg(QStringLiteral("%1").arg(i, 2, 16, QLatin1Char('0')).toUpper())
+                         .arg(c)
+                         .arg(p * 100.0, 0, 'f', 4);
         }
-        const double p = static_cast<double>(c) / static_cast<double>(length);
-        lines << QStringLiteral("%1: %2 ( %3% )")
-                     .arg(QStringLiteral("%1").arg(i, 2, 16, QLatin1Char('0')).toUpper())
-                     .arg(c)
-                     .arg(p * 100.0, 0, 'f', 4);
-    }
 
-    auto* dialog = new QDialog(this);
-    dialog->setWindowTitle(tr("Byte statistics"));
-    auto* layout = new QVBoxLayout(dialog);
-    auto* text = new QPlainTextEdit(dialog);
-    text->setReadOnly(true);
-    text->setPlainText(lines.join(QStringLiteral("\n")));
-    layout->addWidget(text);
-    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
-    connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
-    layout->addWidget(buttons);
-    dialog->setLayout(layout);
-    dialog->resize(480, 640);
-    dialog->show();
+        auto* dialog = new QDialog(this);
+        dialog->setWindowTitle(tr("Byte statistics"));
+        auto* layout = new QVBoxLayout(dialog);
+        auto* text = new QPlainTextEdit(dialog);
+        text->setReadOnly(true);
+        text->setPlainText(lines.join(QStringLiteral("\n")));
+        layout->addWidget(text);
+        auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
+        connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+        layout->addWidget(buttons);
+        dialog->setLayout(layout);
+        dialog->resize(480, 640);
+        dialog->show();
+    });
+
+    HexDocument* doc = doc_.get();
+    watcher->setFuture(QtConcurrent::run([doc, chunks]() -> StatsResult {
+        auto mapFunc = [doc](const std::pair<std::uint64_t, std::uint64_t>& chunk) -> StatsPartial {
+            StatsPartial partial;
+            QByteArray data;
+            QString error;
+            if (!doc->readBytes(chunk.first, chunk.second, data, error)) {
+                partial.ok = false;
+                partial.error = error;
+                return partial;
+            }
+            for (unsigned char b : data) {
+                partial.counts[b]++;
+            }
+            return partial;
+        };
+
+        auto reduceFunc = [](StatsResult& aggregate, const StatsPartial& partial) {
+            if (!aggregate.ok || !partial.ok) {
+                if (!partial.ok && aggregate.ok) {
+                    aggregate.ok = false;
+                    aggregate.error = partial.error;
+                }
+                return;
+            }
+            for (std::size_t i = 0; i < aggregate.counts.size(); ++i) {
+                aggregate.counts[i] += partial.counts[i];
+            }
+        };
+
+        StatsResult aggregate;
+        aggregate = QtConcurrent::blockingMappedReduced(chunks, mapFunc, reduceFunc, QtConcurrent::UnorderedReduce);
+        return aggregate;
+    }));
+    statusBar()->showMessage(tr("Computing byte stats…"), 2000);
 }
 
 void HexEditorWindow::addBookmark() {
@@ -946,55 +1031,78 @@ void HexEditorWindow::diffWithFile() {
         return;
     }
 
-    QFile other(otherPath);
-    if (!other.open(QIODevice::ReadOnly)) {
-        QMessageBox::warning(this, tr("Diff"), tr("Cannot open %1").arg(otherPath));
-        return;
-    }
+    struct DiffResult {
+        bool ok = true;
+        QString error;
+        std::vector<std::uint64_t> diffs;
+    };
 
-    diffOffsets_.clear();
-    currentDiffIndex_ = -1;
-
-    QString error;
-    const std::uint64_t len = doc_->size();
-    const std::uint64_t otherLen = static_cast<std::uint64_t>(other.size());
-    const std::uint64_t maxLen = std::max<std::uint64_t>(len, otherLen);
-
-    constexpr std::uint64_t kChunk = 256 * 1024;
-    std::uint64_t pos = 0;
-    while (pos < maxLen) {
-        const std::uint64_t chunk = std::min<std::uint64_t>(kChunk, maxLen - pos);
-        QByteArray left;
-        if (!doc_->readBytes(pos, chunk, left, error)) {
-            QMessageBox::warning(this, tr("Diff"), error);
-            diffOffsets_.clear();
-            break;
+    auto* watcher = new QFutureWatcher<DiffResult>(this);
+    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher]() {
+        const auto result = watcher->future().result();
+        watcher->deleteLater();
+        if (!result.ok) {
+            QMessageBox::warning(this, tr("Diff"), result.error);
+            return;
         }
-        QByteArray right = other.read(static_cast<qint64>(chunk));
-        if (right.size() < static_cast<int>(chunk)) {
-            right.resize(static_cast<int>(chunk));
+        diffOffsets_ = std::move(result.diffs);
+        currentDiffIndex_ = diffOffsets_.empty() ? -1 : 0;
+
+        if (diffOffsets_.empty()) {
+            QMessageBox::information(this, tr("Diff"), tr("Files are identical."));
         }
-        for (std::uint64_t i = 0; i < chunk; ++i) {
-            const bool diff = left.size() > static_cast<int>(i)
-                                  ? (static_cast<unsigned char>(left.at(static_cast<int>(i))) !=
-                                     static_cast<unsigned char>(right.at(static_cast<int>(i))))
-                                  : (static_cast<unsigned char>(right.at(static_cast<int>(i))) != 0);
-            if (diff) {
-                diffOffsets_.push_back(pos + i);
+        else {
+            QMessageBox::information(this, tr("Diff"), tr("Found %1 differing byte(s).").arg(diffOffsets_.size()));
+            nextDiff(true);
+        }
+        updateActionStates(view_ && view_->selection().has_value());
+    });
+
+    HexDocument* doc = doc_.get();
+    watcher->setFuture(QtConcurrent::run([doc, otherPath]() -> DiffResult {
+        DiffResult result;
+        QFile other(otherPath);
+        if (!other.open(QIODevice::ReadOnly)) {
+            result.ok = false;
+            result.error = QObject::tr("Cannot open %1").arg(otherPath);
+            return result;
+        }
+
+        const std::uint64_t len = doc->size();
+        const std::uint64_t otherLen = static_cast<std::uint64_t>(other.size());
+        const std::uint64_t maxLen = std::max<std::uint64_t>(len, otherLen);
+
+        constexpr std::uint64_t kChunk = 256 * 1024;
+        std::uint64_t pos = 0;
+        QString error;
+
+        while (pos < maxLen) {
+            const std::uint64_t chunk = std::min<std::uint64_t>(kChunk, maxLen - pos);
+            QByteArray left;
+            if (!doc->readBytes(pos, chunk, left, error)) {
+                result.ok = false;
+                result.error = error;
+                return result;
             }
+            QByteArray right = other.read(static_cast<qint64>(chunk));
+            if (right.size() < static_cast<int>(chunk)) {
+                right.resize(static_cast<int>(chunk));
+            }
+            for (std::uint64_t i = 0; i < chunk; ++i) {
+                const bool diff = left.size() > static_cast<int>(i)
+                                      ? (static_cast<unsigned char>(left.at(static_cast<int>(i))) !=
+                                         static_cast<unsigned char>(right.at(static_cast<int>(i))))
+                                      : (static_cast<unsigned char>(right.at(static_cast<int>(i))) != 0);
+                if (diff) {
+                    result.diffs.push_back(pos + i);
+                }
+            }
+            pos += chunk;
         }
-        pos += chunk;
-    }
-
-    if (diffOffsets_.empty()) {
-        QMessageBox::information(this, tr("Diff"), tr("Files are identical."));
-    }
-    else {
-        currentDiffIndex_ = 0;
-        QMessageBox::information(this, tr("Diff"), tr("Found %1 differing byte(s).").arg(diffOffsets_.size()));
-        nextDiff(true);
-    }
-    updateActionStates(view_ && view_->selection().has_value());
+        result.ok = true;
+        return result;
+    }));
+    statusBar()->showMessage(tr("Diffing files…"), 2000);
 }
 
 void HexEditorWindow::sideBySideDiff() {
