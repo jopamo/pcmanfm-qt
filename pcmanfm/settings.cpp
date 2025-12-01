@@ -266,6 +266,8 @@ bool Settings::loadFile(QString filePath) {
     settings.beginGroup(QStringLiteral("Places"));
     QStringList hiddenPlacesList = settings.value(QStringLiteral("HiddenPlaces")).toStringList();
     hiddenPlaces_ = QSet<QString>(hiddenPlacesList.begin(), hiddenPlacesList.end());
+    // Force-hide legacy virtual locations that are no longer supported
+    hiddenPlaces_ << QStringLiteral("computer:///") << QStringLiteral("network:///");
     settings.endGroup();
 
     settings.beginGroup(QStringLiteral("Window"));
