@@ -54,6 +54,9 @@ class HexEditorWindow : public QMainWindow {
                       std::uint64_t length,
                       const std::function<bool(const QByteArray&)>& consumer,
                       QString& errorOut);
+    void addBookmark();
+    void listBookmarks();
+    void jumpBookmark(bool forward);
 
     std::unique_ptr<HexDocument> doc_;
     QPointer<HexEditorView> view_;
@@ -81,6 +84,10 @@ class HexEditorWindow : public QMainWindow {
     QAction* prevModifiedAction_ = nullptr;
     QAction* checksumAction_ = nullptr;
     QAction* statsAction_ = nullptr;
+    QAction* bookmarkAddAction_ = nullptr;
+    QAction* bookmarkPrevAction_ = nullptr;
+    QAction* bookmarkNextAction_ = nullptr;
+    QAction* bookmarkListAction_ = nullptr;
 
     QByteArray lastSearch_;
     QByteArray lastReplace_;
@@ -100,6 +107,12 @@ class HexEditorWindow : public QMainWindow {
     QLabel* inspectorFloat_ = nullptr;
     QLabel* inspectorDouble_ = nullptr;
     QLabel* inspectorUtf8_ = nullptr;
+
+    struct Bookmark {
+        std::uint64_t offset = 0;
+        QString label;
+    };
+    std::vector<Bookmark> bookmarks_;
 };
 
 }  // namespace PCManFM

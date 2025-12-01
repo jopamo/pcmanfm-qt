@@ -187,6 +187,16 @@ void HexEditorWindow::setupUi() {
     statsAction_ = toolbar->addAction(QIcon::fromTheme(QStringLiteral("view-statistics")), tr("Byte Stats…"));
     connect(statsAction_, &QAction::triggered, this, [this] { computeByteStats(true); });
 
+    bookmarkAddAction_ = toolbar->addAction(QIcon::fromTheme(QStringLiteral("bookmark-new")), tr("Add Bookmark"));
+    connect(bookmarkAddAction_, &QAction::triggered, this, &HexEditorWindow::addBookmark);
+    bookmarkPrevAction_ = toolbar->addAction(QIcon::fromTheme(QStringLiteral("go-previous")), tr("Prev Bookmark"));
+    connect(bookmarkPrevAction_, &QAction::triggered, this, [this] { jumpBookmark(false); });
+    bookmarkNextAction_ = toolbar->addAction(QIcon::fromTheme(QStringLiteral("go-next")), tr("Next Bookmark"));
+    connect(bookmarkNextAction_, &QAction::triggered, this, [this] { jumpBookmark(true); });
+    bookmarkListAction_ =
+        toolbar->addAction(QIcon::fromTheme(QStringLiteral("view-list-bookmarks")), tr("List Bookmarks"));
+    connect(bookmarkListAction_, &QAction::triggered, this, &HexEditorWindow::listBookmarks);
+
     insertToggleAction_ = toolbar->addAction(QIcon::fromTheme(QStringLiteral("insert-text")), tr("Insert mode"));
     insertToggleAction_->setCheckable(true);
     insertToggleAction_->setChecked(false);
@@ -352,6 +362,18 @@ void HexEditorWindow::updateActionStates(bool hasSelection) {
     }
     if (statsAction_) {
         statsAction_->setEnabled(hasDoc);
+    }
+    if (bookmarkAddAction_) {
+        bookmarkAddAction_->setEnabled(hasDoc);
+    }
+    if (bookmarkPrevAction_) {
+        bookmarkPrevAction_->setEnabled(hasDoc && !bookmarks_.empty());
+    }
+    if (bookmarkNextAction_) {
+        bookmarkNextAction_->setEnabled(hasDoc && !bookmarks_.empty());
+    }
+    if (bookmarkListAction_) {
+        bookmarkListAction_->setEnabled(hasDoc && !bookmarks_.empty());
     }
 }
 
@@ -824,6 +846,71 @@ void HexEditorWindow::computeByteStats(bool selectionOnly) {
     dialog->setLayout(layout);
     dialog->resize(480, 640);
     dialog->show();
+}
+
+void HexEditorWindow::addBookmark() {
+    if (!view_) {
+        return;
+    }
+    const std::uint64_t offset = view_->cursorOffset();
+    bool ok = false;
+    const QString label =
+        QInputDialog::getText(this, tr("Add bookmark"), tr("Label (optional):"), QLineEdit::Normal, QString(), &ok);
+    if (!ok) {
+        return;
+    }
+    bookmarks_.push_back(Bookmark{offset, label});
+    std::sort(bookmarks_.begin(), bookmarks_.end(),
+              [](const Bookmark& a, const Bookmark& b) { return a.offset < b.offset; });
+    statusBar()->showMessage(tr("Bookmarked 0x%1").arg(offset, 0, 16), 2000);
+    updateActionStates(view_ && view_->selection().has_value());
+}
+
+void HexEditorWindow::jumpBookmark(bool forward) {
+    if (bookmarks_.empty() || !view_) {
+        return;
+    }
+    const std::uint64_t cur = view_->cursorOffset();
+    if (forward) {
+        for (const auto& bm : bookmarks_) {
+            if (bm.offset > cur) {
+                view_->clearSelection();
+                view_->setCursorOffset(bm.offset);
+                statusBar()->showMessage(
+                    tr("Jumped to bookmark: %1 (0x%2)").arg(bm.label, QString::number(bm.offset, 16)));
+                return;
+            }
+        }
+        view_->clearSelection();
+        view_->setCursorOffset(bookmarks_.front().offset);
+        statusBar()->showMessage(tr("Wrapped to first bookmark: %1").arg(bookmarks_.front().label));
+    }
+    else {
+        for (auto it = bookmarks_.rbegin(); it != bookmarks_.rend(); ++it) {
+            if (it->offset < cur) {
+                view_->clearSelection();
+                view_->setCursorOffset(it->offset);
+                statusBar()->showMessage(
+                    tr("Jumped to bookmark: %1 (0x%2)").arg(it->label, QString::number(it->offset, 16)));
+                return;
+            }
+        }
+        view_->clearSelection();
+        view_->setCursorOffset(bookmarks_.back().offset);
+        statusBar()->showMessage(tr("Wrapped to last bookmark: %1").arg(bookmarks_.back().label));
+    }
+}
+
+void HexEditorWindow::listBookmarks() {
+    if (bookmarks_.empty()) {
+        QMessageBox::information(this, tr("Bookmarks"), tr("No bookmarks set."));
+        return;
+    }
+    QStringList lines;
+    for (const auto& bm : bookmarks_) {
+        lines << tr("0x%1 (%2): %3").arg(bm.offset, 0, 16).arg(bm.offset).arg(bm.label);
+    }
+    QMessageBox::information(this, tr("Bookmarks"), lines.join(QStringLiteral("\n")));
 }
 
 void HexEditorWindow::updateInspector(std::uint64_t offset) {
