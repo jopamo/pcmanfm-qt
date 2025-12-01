@@ -16,9 +16,13 @@
 #include <QToolBar>
 #include <QTimer>
 #include <QLabel>
+#include <QDockWidget>
+#include <QFormLayout>
 
 #include <algorithm>
 #include <cctype>
+#include <vector>
+#include <cstring>
 
 namespace PCManFM {
 
@@ -200,6 +204,40 @@ void HexEditorWindow::setupUi() {
     statusBar()->addPermanentWidget(modeLabel_);
     statusBar()->addPermanentWidget(modifiedLabel_);
 
+    inspectorDock_ = new QDockWidget(tr("Inspect"), this);
+    inspectorDock_->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    auto* inspector = new QWidget(inspectorDock_);
+    auto* form = new QFormLayout(inspector);
+    inspectorOffset_ = new QLabel(tr("0x0 / 0"), inspector);
+    inspectorU8_ = new QLabel(QString(), inspector);
+    inspectorI8_ = new QLabel(QString(), inspector);
+    inspectorU16LE_ = new QLabel(QString(), inspector);
+    inspectorU16BE_ = new QLabel(QString(), inspector);
+    inspectorU32LE_ = new QLabel(QString(), inspector);
+    inspectorU32BE_ = new QLabel(QString(), inspector);
+    inspectorU64LE_ = new QLabel(QString(), inspector);
+    inspectorU64BE_ = new QLabel(QString(), inspector);
+    inspectorFloat_ = new QLabel(QString(), inspector);
+    inspectorDouble_ = new QLabel(QString(), inspector);
+    inspectorUtf8_ = new QLabel(QString(), inspector);
+
+    form->addRow(tr("Offset"), inspectorOffset_);
+    form->addRow(tr("U8"), inspectorU8_);
+    form->addRow(tr("I8"), inspectorI8_);
+    form->addRow(tr("U16 LE"), inspectorU16LE_);
+    form->addRow(tr("U16 BE"), inspectorU16BE_);
+    form->addRow(tr("U32 LE"), inspectorU32LE_);
+    form->addRow(tr("U32 BE"), inspectorU32BE_);
+    form->addRow(tr("U64 LE"), inspectorU64LE_);
+    form->addRow(tr("U64 BE"), inspectorU64BE_);
+    form->addRow(tr("Float"), inspectorFloat_);
+    form->addRow(tr("Double"), inspectorDouble_);
+    form->addRow(tr("UTF-8"), inspectorUtf8_);
+
+    inspector->setLayout(form);
+    inspectorDock_->setWidget(inspector);
+    addDockWidget(Qt::RightDockWidgetArea, inspectorDock_);
+
     updateActionStates(false);
     statusBar()->showMessage(tr("Ready"));
 }
@@ -216,6 +254,7 @@ bool HexEditorWindow::openFile(const QString& path, QString& errorOut) {
             QMessageBox::warning(this, tr("Hex editor"),
                                  tr("The selected path is not a regular file; editing may not be safe."));
         }
+        updateInspector(0);
     }
     return ok;
 }
@@ -254,6 +293,7 @@ void HexEditorWindow::updateStatus(std::uint64_t offset, int byteValue, bool has
     if (modifiedLabel_) {
         modifiedLabel_->setText(modified ? tr("Modified") : QString());
     }
+    updateInspector(offset);
     updateActionStates(hasSelection);
 }
 
@@ -406,6 +446,7 @@ void HexEditorWindow::checkExternalChanges() {
             view_->setCursorOffset(0);
             view_->clearSelection();
             updateWindowTitle();
+            updateInspector(0);
             return;
         }
 
@@ -420,6 +461,7 @@ void HexEditorWindow::checkExternalChanges() {
             view_->setCursorOffset(0);
             view_->clearSelection();
             updateWindowTitle();
+            updateInspector(0);
         }
     }
 }
@@ -614,6 +656,102 @@ void HexEditorWindow::jumpToModified(bool forward) {
     view_->setSelection(found, 1);
     view_->setCursorOffset(found, true);
     statusBar()->showMessage(tr("Jumped to modified byte at 0x%1").arg(found, 0, 16));
+}
+
+void HexEditorWindow::updateInspector(std::uint64_t offset) {
+    if (!doc_ || !inspectorDock_) {
+        return;
+    }
+
+    auto setText = [](QLabel* label, const QString& text) {
+        if (label) {
+            label->setText(text);
+        }
+    };
+
+    QString error;
+    QByteArray data;
+    if (!doc_->readBytes(offset, 16, data, error)) {
+        setText(inspectorOffset_, tr("N/A"));
+        setText(inspectorU8_, tr("N/A"));
+        setText(inspectorI8_, tr("N/A"));
+        setText(inspectorU16LE_, tr("N/A"));
+        setText(inspectorU16BE_, tr("N/A"));
+        setText(inspectorU32LE_, tr("N/A"));
+        setText(inspectorU32BE_, tr("N/A"));
+        setText(inspectorU64LE_, tr("N/A"));
+        setText(inspectorU64BE_, tr("N/A"));
+        setText(inspectorFloat_, tr("N/A"));
+        setText(inspectorDouble_, tr("N/A"));
+        setText(inspectorUtf8_, tr("N/A"));
+        return;
+    }
+
+    setText(inspectorOffset_, tr("0x%1 / %2").arg(offset, 0, 16).arg(offset));
+
+    auto readLE = [&](int bytes, quint64& out) -> bool {
+        if (data.size() < bytes) {
+            return false;
+        }
+        out = 0;
+        for (int i = bytes - 1; i >= 0; --i) {
+            out = (out << 8) | static_cast<unsigned char>(data.at(i));
+        }
+        return true;
+    };
+    auto readBE = [&](int bytes, quint64& out) -> bool {
+        if (data.size() < bytes) {
+            return false;
+        }
+        out = 0;
+        for (int i = 0; i < bytes; ++i) {
+            out = (out << 8) | static_cast<unsigned char>(data.at(i));
+        }
+        return true;
+    };
+
+    if (!data.isEmpty()) {
+        const quint8 u8 = static_cast<quint8>(data.at(0));
+        const qint8 i8 = static_cast<qint8>(data.at(0));
+        setText(inspectorU8_, tr("%1 (0x%2)").arg(u8).arg(u8, 0, 16));
+        setText(inspectorI8_, QString::number(i8));
+    }
+    else {
+        setText(inspectorU8_, tr("N/A"));
+        setText(inspectorI8_, tr("N/A"));
+    }
+
+    quint64 v = 0;
+    setText(inspectorU16LE_, readLE(2, v) ? tr("%1 (0x%2)").arg(v).arg(v, 0, 16) : tr("N/A"));
+    setText(inspectorU16BE_, readBE(2, v) ? tr("%1 (0x%2)").arg(v).arg(v, 0, 16) : tr("N/A"));
+    setText(inspectorU32LE_, readLE(4, v) ? tr("%1 (0x%2)").arg(v).arg(v, 0, 16) : tr("N/A"));
+    setText(inspectorU32BE_, readBE(4, v) ? tr("%1 (0x%2)").arg(v).arg(v, 0, 16) : tr("N/A"));
+    setText(inspectorU64LE_, readLE(8, v) ? tr("%1 (0x%2)").arg(v).arg(v, 0, 16) : tr("N/A"));
+    setText(inspectorU64BE_, readBE(8, v) ? tr("%1 (0x%2)").arg(v).arg(v, 0, 16) : tr("N/A"));
+
+    if (data.size() >= static_cast<int>(sizeof(float))) {
+        float f = 0.0f;
+        std::memcpy(&f, data.constData(), sizeof(float));
+        setText(inspectorFloat_, QString::number(f));
+    }
+    else {
+        setText(inspectorFloat_, tr("N/A"));
+    }
+
+    if (data.size() >= static_cast<int>(sizeof(double))) {
+        double d = 0.0;
+        std::memcpy(&d, data.constData(), sizeof(double));
+        setText(inspectorDouble_, QString::number(d));
+    }
+    else {
+        setText(inspectorDouble_, tr("N/A"));
+    }
+
+    QString utf8 = QString::fromUtf8(data);
+    if (utf8.size() > 32) {
+        utf8 = utf8.left(32) + QStringLiteral("…");
+    }
+    setText(inspectorUtf8_, utf8);
 }
 
 void HexEditorWindow::goToOffset() {

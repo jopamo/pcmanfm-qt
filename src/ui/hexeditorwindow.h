@@ -16,6 +16,7 @@
 
 class QTimer;
 class QLabel;
+class QDockWidget;
 
 namespace PCManFM {
 
@@ -46,6 +47,7 @@ class HexEditorWindow : public QMainWindow {
     QByteArray promptForPattern(const QString& title, bool& okOut);
     QByteArray promptForReplace(bool& okOut);
     void goToOffset();
+    void updateInspector(std::uint64_t offset);
 
     std::unique_ptr<HexDocument> doc_;
     QPointer<HexEditorView> view_;
@@ -77,6 +79,19 @@ class HexEditorWindow : public QMainWindow {
 
     QLabel* modeLabel_ = nullptr;
     QLabel* modifiedLabel_ = nullptr;
+    QDockWidget* inspectorDock_ = nullptr;
+    QLabel* inspectorOffset_ = nullptr;
+    QLabel* inspectorU8_ = nullptr;
+    QLabel* inspectorI8_ = nullptr;
+    QLabel* inspectorU16LE_ = nullptr;
+    QLabel* inspectorU16BE_ = nullptr;
+    QLabel* inspectorU32LE_ = nullptr;
+    QLabel* inspectorU32BE_ = nullptr;
+    QLabel* inspectorU64LE_ = nullptr;
+    QLabel* inspectorU64BE_ = nullptr;
+    QLabel* inspectorFloat_ = nullptr;
+    QLabel* inspectorDouble_ = nullptr;
+    QLabel* inspectorUtf8_ = nullptr;
 };
 
 }  // namespace PCManFM
