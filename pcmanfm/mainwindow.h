@@ -283,7 +283,6 @@ class MainWindow : public QMainWindow {
     bool splitView_;
 
     int splitTabsNum_;  // number of tabs to be restored from the first view frame of the last window
-    QShortcut* deleteShortcut_;
 
     static QPointer<MainWindow> lastActive_;
 };
