@@ -11,6 +11,8 @@
 #include "ifileops.h"
 #include "ifoldermodel.h"
 
+namespace PCManFM {
+
 class BackendRegistry {
    public:
     static void initDefaults();
