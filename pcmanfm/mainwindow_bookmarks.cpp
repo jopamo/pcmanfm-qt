@@ -6,6 +6,9 @@
 #include <QAction>
 #include <QDir>
 #include <QMenu>
+#include <algorithm>
+
+#include <libfm-qt6/core/bookmarks.h>
 
 #include "application.h"
 #include "mainwindow.h"
@@ -58,13 +61,48 @@ void MainWindow::onBookmarkActionTriggered() {
 }
 
 void MainWindow::on_actionAddToBookmarks_triggered() {
-    auto* app = qobject_cast<Application*>(qApp);
-    if (!app) {
+    auto* page = currentPage();
+    if (!page) {
         return;
     }
 
-    // delegate to Application's existing bookmark editor
-    app->editBookmarks();
+    const Fm::FilePath path = page->path();
+    if (!path) {
+        return;
+    }
+
+    auto bookmarks = Fm::Bookmarks::globalInstance();
+    if (!bookmarks) {
+        return;
+    }
+
+    const auto& items = bookmarks->items();
+    const bool alreadyBookmarked = std::any_of(
+        items.cbegin(), items.cend(),
+        [&path](const std::shared_ptr<const Fm::BookmarkItem>& item) { return item && item->path() == path; });
+    if (alreadyBookmarked) {
+        return;
+    }
+
+    QString name;
+    const auto& folder = page->folder();
+    if (folder && folder->info()) {
+        name = folder->info()->displayName();
+    }
+
+    if (name.isEmpty()) {
+        const auto baseName = path.baseName();
+        if (baseName) {
+            name = QString::fromUtf8(baseName.get());
+        }
+    }
+
+    if (name.isEmpty()) {
+        const auto pathStr = path.toString();
+        name = QString::fromUtf8(pathStr.get());
+    }
+
+    bookmarks->insert(path, name, static_cast<int>(items.size()));
 }
 
 }  // namespace PCManFM
