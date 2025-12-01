@@ -124,6 +124,18 @@ MainWindow::MainWindow(Fm::FilePath path)
     viewModeGroup->addAction(ui.actionDetailedList);
     viewModeGroup->addAction(ui.actionThumbnailView);
 
+    // Sorting column actions should be mutually exclusive
+    auto* sortColumnGroup = new QActionGroup(this);
+    sortColumnGroup->setExclusive(true);
+    sortColumnGroup->addAction(ui.actionByFileName);
+    sortColumnGroup->addAction(ui.actionByMTime);
+    sortColumnGroup->addAction(ui.actionByCrTime);
+    sortColumnGroup->addAction(ui.actionByDTime);
+    sortColumnGroup->addAction(ui.actionByFileSize);
+    sortColumnGroup->addAction(ui.actionByFileType);
+    sortColumnGroup->addAction(ui.actionByOwner);
+    sortColumnGroup->addAction(ui.actionByGroup);
+
     setActionIcon(ui.actionIconView, QStringLiteral("view-list-icons"), QStyle::SP_FileDialogContentsView);
     setActionIcon(ui.actionThumbnailView, QStringLiteral("view-list-icons"), QStyle::SP_FileDialogContentsView);
     setActionIcon(ui.actionCompactView, QStringLiteral("view-list-details"), QStyle::SP_FileDialogDetailedView);
