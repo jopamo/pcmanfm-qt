@@ -4,9 +4,12 @@
  */
 
 #include <QActionGroup>
+#include <QCursor>
 #include <QFontMetrics>
 #include <QMenu>
 #include <QMessageBox>
+#include <QPoint>
+#include <QToolBar>
 #include <QToolButton>
 
 #include "application.h"
@@ -51,6 +54,30 @@ void MainWindow::toggleMenuBar(bool /*checked*/) {
 
     ui.actionMenu->setVisible(!showMenuBar);
     settings.setShowMenuBar(showMenuBar);
+}
+
+void MainWindow::on_actionMenu_triggered() {
+    if (!ui.menubar) {
+        return;
+    }
+
+    QMenu popup(this);
+    const auto actions = ui.menubar->actions();
+    for (auto* action : actions) {
+        if (!action || !action->isVisible()) {
+            continue;
+        }
+        popup.addAction(action);
+    }
+
+    QPoint pos = QCursor::pos();
+    if (ui.toolBar) {
+        if (QWidget* toolButton = ui.toolBar->widgetForAction(ui.actionMenu)) {
+            pos = toolButton->mapToGlobal(QPoint(0, toolButton->height()));
+        }
+    }
+
+    popup.exec(pos);
 }
 
 void MainWindow::updateRecenMenu() {
