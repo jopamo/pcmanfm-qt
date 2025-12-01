@@ -12,6 +12,7 @@
 #include "tabpage.h"
 
 // Qt Headers
+#include <QActionGroup>
 #include <QApplication>
 #include <QDir>   // <--- Added for QDir
 #include <QFile>  // <--- Added for QFile
@@ -114,6 +115,14 @@ MainWindow::MainWindow(Fm::FilePath path)
             action->setIcon(QIcon::fromTheme(themeIcon, style()->standardIcon(standardIcon)));
         }
     };
+
+    // View mode actions should be mutually exclusive
+    auto* viewModeGroup = new QActionGroup(this);
+    viewModeGroup->setExclusive(true);
+    viewModeGroup->addAction(ui.actionIconView);
+    viewModeGroup->addAction(ui.actionCompactView);
+    viewModeGroup->addAction(ui.actionDetailedList);
+    viewModeGroup->addAction(ui.actionThumbnailView);
 
     setActionIcon(ui.actionIconView, QStringLiteral("view-list-icons"), QStyle::SP_FileDialogContentsView);
     setActionIcon(ui.actionThumbnailView, QStringLiteral("view-list-icons"), QStyle::SP_FileDialogContentsView);
