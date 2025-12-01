@@ -13,6 +13,7 @@
 
 #include "hexdocument.h"
 #include "hexeditorview.h"
+#include "color_manager.h"
 
 class QTimer;
 class QLabel;
@@ -62,6 +63,7 @@ class HexEditorWindow : public QMainWindow {
     void sideBySideDiff();
 
     std::unique_ptr<HexDocument> doc_;
+    std::unique_ptr<ColorManager> colors_;
     QPointer<HexEditorView> view_;
     QTimer* changeTimer_ = nullptr;
     bool suppressExternalPrompt_ = false;

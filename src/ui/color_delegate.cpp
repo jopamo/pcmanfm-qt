@@ -28,13 +28,14 @@ void ColorDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
     QColor bg = opt.palette.color(QPalette::Base);
 
     const CellCategory cat = static_cast<CellCategory>(index.data(RoleCategory).toInt());
+    const bool selected = opt.state.testFlag(QStyle::State_Selected);
     const bool patched = index.data(RolePatched).toBool();
     const bool bookmark = index.data(RoleBookmark).toBool();
     const bool searchHit = index.data(RoleSearchHit).toBool();
 
     switch (cat) {
         case CellCategory::InstructionAddress:
-            fg = scheme.address;
+            fg = selected ? scheme.address : scheme.address.lighter(125);
             break;
         case CellCategory::InstructionBytes:
             fg = scheme.bytes;

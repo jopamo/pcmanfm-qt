@@ -25,6 +25,8 @@
 #include <QFutureWatcher>
 #include <QtConcurrent>
 
+#include "color_manager.h"
+
 #include <algorithm>
 #include <cctype>
 #include <vector>
@@ -73,7 +75,9 @@ HexEditorWindow::HexEditorWindow(QWidget* parent) : QMainWindow(parent), doc_(st
 HexEditorWindow::~HexEditorWindow() = default;
 
 void HexEditorWindow::setupUi() {
+    colors_ = std::make_unique<ColorManager>(this);
     view_ = new HexEditorView(doc_.get(), this);
+    view_->setColorManager(colors_.get());
     setCentralWidget(view_);
 
     auto* toolbar = addToolBar(tr("Hex Editor"));

@@ -378,7 +378,8 @@ bool HexEditorView::offsetFromPosition(const QPoint& pos,
 void HexEditorView::paintEvent(QPaintEvent* event) {
     Q_UNUSED(event);
     QPainter painter(viewport());
-    painter.fillRect(rect(), palette().base());
+    const ColorScheme* scheme = colors_ ? &colors_->scheme() : nullptr;
+    painter.fillRect(rect(), scheme ? scheme->background : palette().base());
 
     if (!doc_) {
         painter.drawText(rect(), Qt::AlignCenter, tr("No file loaded"));
@@ -392,7 +393,11 @@ void HexEditorView::paintEvent(QPaintEvent* event) {
     const std::uint64_t startOffset = static_cast<std::uint64_t>(firstRow) * static_cast<std::uint64_t>(bytesPerRow_);
 
     const QColor highlightColor = palette().color(QPalette::Highlight);
-    const QColor modifiedColor = palette().color(QPalette::Link);
+    const QColor addrColor = scheme ? scheme->address.lighter(125) : palette().color(QPalette::Mid);
+    const QColor byteColor = scheme ? scheme->bytes : palette().color(QPalette::Text);
+    const QColor asciiColor = scheme ? scheme->bytes : palette().color(QPalette::Text);
+    const QColor asciiNonPrintable = scheme ? scheme->bytes.darker(140) : palette().color(QPalette::Mid);
+    const QColor patchedBg = scheme ? scheme->patchedBg : palette().color(QPalette::Link);
 
     for (int row = 0; row < rowsVisible; ++row) {
         const std::uint64_t rowOffset = startOffset + static_cast<std::uint64_t>(row) * bytesPerRow_;
@@ -412,7 +417,7 @@ void HexEditorView::paintEvent(QPaintEvent* event) {
         const int y = (row + 1) * lineHeight - fm.descent();
 
         // Address
-        painter.setPen(palette().color(QPalette::Mid));
+        painter.setPen(addrColor);
         const QString addr = QStringLiteral("%1").arg(rowOffset, addressDigits_, 16, QLatin1Char('0')).toUpper();
         painter.drawText(0, y, addr);
 
@@ -425,6 +430,10 @@ void HexEditorView::paintEvent(QPaintEvent* event) {
 
             QRect cellRect(hexColumnX(i, fm), y - lineHeight + fm.descent(),
                            fm.horizontalAdvance(QStringLiteral("FF ")), lineHeight);
+            if (!isSelected && hasByte && modified.size() > static_cast<std::size_t>(i) &&
+                modified[static_cast<std::size_t>(i)]) {
+                painter.fillRect(cellRect.adjusted(0, 0, fm.horizontalAdvance(QLatin1Char('0')), 0), patchedBg);
+            }
             if (isSelected) {
                 painter.fillRect(cellRect.adjusted(0, 0, fm.horizontalAdvance(QLatin1Char('0')), 0), highlightColor);
             }
@@ -432,16 +441,11 @@ void HexEditorView::paintEvent(QPaintEvent* event) {
             if (hasByte) {
                 const QString text =
                     QStringLiteral("%1").arg(static_cast<unsigned char>(data.at(i)), 2, 16, QLatin1Char('0')).toUpper();
-                if (modified.size() > static_cast<std::size_t>(i) && modified[static_cast<std::size_t>(i)]) {
-                    painter.setPen(modifiedColor);
-                }
-                else {
-                    painter.setPen(palette().color(QPalette::Text));
-                }
+                painter.setPen(byteColor);
                 painter.drawText(cellRect, Qt::AlignLeft | Qt::AlignVCenter, text);
             }
             else {
-                painter.setPen(palette().color(QPalette::Mid));
+                painter.setPen(addrColor);
                 painter.drawText(cellRect, Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("  "));
             }
 
@@ -466,9 +470,10 @@ void HexEditorView::paintEvent(QPaintEvent* event) {
             }
             if (hasByte) {
                 const char c = data.at(i);
-                painter.setPen(palette().color(QPalette::Text));
+                const bool printable = isPrintable(c);
+                painter.setPen(printable ? asciiColor : asciiNonPrintable);
                 painter.drawText(cell, Qt::AlignLeft | Qt::AlignVCenter,
-                                 isPrintable(c) ? QString(QChar::fromLatin1(c)) : QStringLiteral("."));
+                                 printable ? QString(QChar::fromLatin1(c)) : QStringLiteral("."));
             }
             if (isCursor && cursorAscii_) {
                 painter.setPen(palette().color(QPalette::Highlight));

@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "hexdocument.h"
+#include "color_manager.h"
 
 namespace PCManFM {
 
@@ -23,6 +24,10 @@ class HexEditorView : public QAbstractScrollArea {
     explicit HexEditorView(HexDocument* doc, QWidget* parent = nullptr);
 
     void setDocument(HexDocument* doc);
+    void setColorManager(ColorManager* colors) {
+        colors_ = colors;
+        viewport()->update();
+    }
     HexDocument* document() const { return doc_; }
 
     void setInsertMode(bool insert);
@@ -78,6 +83,7 @@ class HexEditorView : public QAbstractScrollArea {
     std::optional<std::uint64_t> anchor_;
     int bytesPerRow_ = 16;
     int addressDigits_ = 8;
+    ColorManager* colors_ = nullptr;
 };
 
 }  // namespace PCManFM
