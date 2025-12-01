@@ -8,10 +8,12 @@
 #include <cerrno>
 #include <cstring>
 #include <dirent.h>
+#include <array>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <b3sum/blake3.h>
 
 namespace PCManFM::FsOps {
 
@@ -71,6 +73,69 @@ struct Dir {
 inline void set_error(Error& err, const char* context) {
     err.code = errno;
     err.message = std::string(context) + ": " + std::strerror(errno);
+}
+
+bool blake3_file_impl(const std::string& path, std::string& hexHash, Error& err) {
+    hexHash.clear();
+
+    // Reject symlinks and non-regular files explicitly.
+    struct stat st{};
+    if (lstat(path.c_str(), &st) != 0) {
+        set_error(err, "lstat");
+        return false;
+    }
+    if (S_ISLNK(st.st_mode)) {
+        err.code = ELOOP;
+        err.message = "symlinks are not supported for checksum calculation";
+        return false;
+    }
+    if (!S_ISREG(st.st_mode)) {
+        err.code = EINVAL;
+        err.message = "not a regular file";
+        return false;
+    }
+
+    int flags = O_RDONLY | O_CLOEXEC;
+#ifdef O_NOFOLLOW
+    flags |= O_NOFOLLOW;
+#endif
+    Fd fd(::open(path.c_str(), flags));
+    if (!fd.valid()) {
+        set_error(err, "open");
+        return false;
+    }
+
+    blake3_hasher hasher;
+    blake3_hasher_init(&hasher);
+
+    std::array<char, 64 * 1024> buffer{};
+    for (;;) {
+        const ssize_t n = ::read(fd.fd, buffer.data(), buffer.size());
+        if (n < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            set_error(err, "read");
+            return false;
+        }
+        if (n == 0) {
+            break;
+        }
+        blake3_hasher_update(&hasher, reinterpret_cast<const uint8_t*>(buffer.data()), static_cast<size_t>(n));
+    }
+
+    uint8_t out[BLAKE3_OUT_LEN];
+    blake3_hasher_finalize(&hasher, out, BLAKE3_OUT_LEN);
+
+    static const char* kHex = "0123456789abcdef";
+    hexHash.resize(BLAKE3_OUT_LEN * 2);
+    for (size_t i = 0; i < BLAKE3_OUT_LEN; ++i) {
+        hexHash[2 * i] = kHex[(out[i] >> 4) & 0xF];
+        hexHash[2 * i + 1] = kHex[out[i] & 0xF];
+    }
+
+    err = {};
+    return true;
 }
 
 inline bool should_continue(const ProgressCallback& cb, const ProgressInfo& info) {
@@ -414,6 +479,10 @@ bool delete_at(int dirfd, const char* name, ProgressInfo& progress, const Progre
 }
 
 }  // namespace
+
+bool blake3_file(const std::string& path, std::string& hexHash, Error& err) {
+    return blake3_file_impl(path, hexHash, err);
+}
 
 bool read_file_all(const std::string& path, std::vector<std::uint8_t>& out, Error& err) {
     err = {};

@@ -60,6 +60,9 @@ bool move_path(const std::string& source,
 
 bool delete_path(const std::string& path, ProgressInfo& progress, const ProgressCallback& callback, Error& err);
 
+// Compute a BLAKE3 checksum for a regular file (rejects symlinks and non-regular files).
+bool blake3_file(const std::string& path, std::string& hexHash, Error& err);
+
 }  // namespace PCManFM::FsOps
 
 #endif  // PCMANFM_FS_OPS_H

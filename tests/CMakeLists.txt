@@ -33,10 +33,12 @@ target_link_libraries(pcmanfm-qt-fs-tests
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
+    ${BLAKE3_LIBRARIES}
 )
 
 target_include_directories(pcmanfm-qt-fs-tests PRIVATE
     ${CMAKE_SOURCE_DIR}/pcmanfm
+    ${BLAKE3_INCLUDE_DIRS}
 )
 
 add_test(NAME pcmanfm-qt-fs-tests COMMAND pcmanfm-qt-fs-tests)
@@ -55,11 +57,13 @@ target_link_libraries(pcmanfm-qt-ops-tests
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
+    ${BLAKE3_LIBRARIES}
 )
 
 target_include_directories(pcmanfm-qt-ops-tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/pcmanfm
+    ${BLAKE3_INCLUDE_DIRS}
 )
 
 add_test(NAME pcmanfm-qt-ops-tests COMMAND pcmanfm-qt-ops-tests)

@@ -25,9 +25,7 @@
 #include <QStringList>
 #include <QVBoxLayout>
 
-extern "C" {
-#include <b3sum/blake3.h>
-}
+#include <string>
 
 // LibFM-Qt Headers
 #include <libfm-qt6/filemenu.h>
@@ -39,14 +37,7 @@ extern "C" {
 #include "launcher.h"
 #include "mainwindow.h"
 #include "settings.h"
-
-#include <array>
-#include <cerrno>
-#include <cstring>
-#include <fcntl.h>
-#include <memory>
-#include <sys/stat.h>
-#include <unistd.h>
+#include "../src/core/fs_ops.h"
 
 namespace PCManFM {
 
@@ -68,82 +59,6 @@ struct ChecksumWindowWidgets {
 QHash<QString, ChecksumWindowWidgets>& checksumWindows() {
     static QHash<QString, ChecksumWindowWidgets> windows;
     return windows;
-}
-
-bool computeBlake3ForFile(const QString& path, QString* hashOut, QString* errorOut) {
-    const QByteArray nativePath = QFile::encodeName(path);
-
-    struct stat st{};
-    if (lstat(nativePath.constData(), &st) != 0) {
-        if (errorOut) {
-            *errorOut = QString::fromLocal8Bit(strerror(errno));
-        }
-        return false;
-    }
-    if (S_ISLNK(st.st_mode)) {
-        if (errorOut) {
-            *errorOut = QObject::tr("Symlinks are not supported for checksum calculation.");
-        }
-        return false;
-    }
-    if (!S_ISREG(st.st_mode)) {
-        if (errorOut) {
-            *errorOut = QObject::tr("Not a regular file.");
-        }
-        return false;
-    }
-
-    int flags = O_RDONLY | O_CLOEXEC;
-#ifdef O_NOFOLLOW
-    flags |= O_NOFOLLOW;
-#endif
-    const int fd = ::open(nativePath.constData(), flags);
-    if (fd < 0) {
-        if (errorOut) {
-            *errorOut = QString::fromLocal8Bit(strerror(errno));
-        }
-        return false;
-    }
-
-    auto fdCloser = [](int* f) {
-        if (f && *f >= 0) {
-            ::close(*f);
-        }
-    };
-    std::unique_ptr<int, decltype(fdCloser)> fdGuard(new int(fd), fdCloser);
-
-    blake3_hasher hasher;
-    blake3_hasher_init(&hasher);
-
-    std::array<char, 64 * 1024> buffer{};
-    while (true) {
-        const ssize_t bytesRead = ::read(fd, buffer.data(), buffer.size());
-        if (bytesRead > 0) {
-            blake3_hasher_update(&hasher, reinterpret_cast<const uint8_t*>(buffer.data()),
-                                 static_cast<size_t>(bytesRead));
-        }
-        else if (bytesRead == 0) {
-            break;
-        }
-        else {
-            if (errno == EINTR) {
-                continue;
-            }
-            if (errorOut) {
-                *errorOut = QString::fromLocal8Bit(strerror(errno));
-            }
-            return false;
-        }
-    }
-
-    uint8_t output[BLAKE3_OUT_LEN];
-    blake3_hasher_finalize(&hasher, output, BLAKE3_OUT_LEN);
-
-    if (hashOut) {
-        QByteArray hash(reinterpret_cast<const char*>(output), BLAKE3_OUT_LEN);
-        *hashOut = QString::fromLatin1(hash.toHex());
-    }
-    return true;
 }
 
 }  // namespace
@@ -350,10 +265,16 @@ void View::onCalculateBlake3() {
     for (const auto& path : paths) {
         QString hash;
         QString error;
-        if (!computeBlake3ForFile(path, &hash, &error)) {
-            if (error.isEmpty()) {
-                error = tr("Failed to compute BLAKE3 checksum.");
-            }
+
+        const QByteArray nativePath = QFile::encodeName(path);
+        FsOps::Error err;
+        std::string outHash;
+        if (!FsOps::blake3_file(nativePath.constData(), outHash, err)) {
+            error =
+                err.message.empty() ? tr("Failed to compute BLAKE3 checksum.") : QString::fromStdString(err.message);
+        }
+        else {
+            hash = QString::fromLatin1(outHash.c_str());
         }
 
         ChecksumWindowWidgets& widgets = ensureWindow(path);
