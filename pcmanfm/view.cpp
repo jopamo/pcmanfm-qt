@@ -236,6 +236,10 @@ void View::onOpenInHexEditor() {
         QMessageBox::warning(window(), tr("Hex editor"), tr("Hex editing is only available for files."));
         return;
     }
+    if (file->isSymlink()) {
+        QMessageBox::warning(window(), tr("Hex editor"), tr("Hex editing is not available for symbolic links."));
+        return;
+    }
     if (!file->isNative()) {
         QMessageBox::warning(window(), tr("Hex editor"), tr("Only local files can be edited in hex."));
         return;
@@ -274,6 +278,10 @@ void View::onDisassembleWithCapstone() {
     const auto& file = files.front();
     if (file->isDir()) {
         QMessageBox::warning(window(), tr("Disassembly"), tr("Disassembly is only available for files."));
+        return;
+    }
+    if (file->isSymlink()) {
+        QMessageBox::warning(window(), tr("Disassembly"), tr("Disassembly is not available for symbolic links."));
         return;
     }
     if (!file->isNative()) {
@@ -316,6 +324,11 @@ void View::onCalculateBlake3() {
         if (!file || file->isDir()) {
             QMessageBox::warning(window(), tr("BLAKE3 checksum"),
                                  tr("Checksum calculation is only available for files."));
+            return;
+        }
+        if (file->isSymlink()) {
+            QMessageBox::warning(window(), tr("BLAKE3 checksum"),
+                                 tr("Checksum calculation is not available for symbolic links."));
             return;
         }
         if (!file->isNative()) {
@@ -561,6 +574,7 @@ void View::prepareFileMenu(Fm::FileMenu* menu) {
     bool allNative = true;
     bool allDirectory = true;
     bool hasDirectory = false;
+    bool anySymlink = false;
 
     auto files = menu->files();
     for (auto& fi : files) {
@@ -568,6 +582,10 @@ void View::prepareFileMenu(Fm::FileMenu* menu) {
             allNative = false;
             allDirectory = false;
             continue;
+        }
+
+        if (fi->isSymlink()) {
+            anySymlink = true;
         }
 
         if (fi->isDir()) {
@@ -610,7 +628,7 @@ void View::prepareFileMenu(Fm::FileMenu* menu) {
         }
 
         bool canDisasm = false;
-        if (allFiles && allNative && files.size() == 1) {
+        if (allFiles && allNative && !anySymlink && files.size() == 1) {
             const auto& file = files.front();
             auto localPath = file->path().localPath();
             if (localPath) {
@@ -618,7 +636,7 @@ void View::prepareFileMenu(Fm::FileMenu* menu) {
             }
         }
 
-        if (allFiles && allNative) {
+        if (allFiles && allNative && !anySymlink) {
             auto* action = new QAction(QIcon::fromTheme(QStringLiteral("accessories-calculator")),
                                        tr("Calculate BLAKE3 Checksum"), menu);
             connect(action, &QAction::triggered, this, &View::onCalculateBlake3);
