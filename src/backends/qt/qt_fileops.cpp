@@ -150,8 +150,8 @@ class QtFileOps::Worker : public QObject {
             [this, req](const std::string& src, const std::string& dst, FsOps::ProgressInfo& progress,
                         FsOps::Error& err) {
                 auto cb = makeProgressCallback();
-                Q_UNUSED(req);
-                return FsOps::copy_path(src, dst, progress, cb, err);
+                const bool preserve = req.preserveOwnership;
+                return FsOps::copy_path(src, dst, progress, cb, err, preserve);
             },
             /*needsDestination=*/true);
     }
@@ -159,9 +159,11 @@ class QtFileOps::Worker : public QObject {
     void performMove(const FileOpRequest& req) {
         performOperationList(
             req,
-            [this](const std::string& src, const std::string& dst, FsOps::ProgressInfo& progress, FsOps::Error& err) {
+            [this, req](const std::string& src, const std::string& dst, FsOps::ProgressInfo& progress,
+                        FsOps::Error& err) {
                 auto cb = makeProgressCallback();
-                return FsOps::move_path(src, dst, progress, cb, err);
+                return FsOps::move_path(src, dst, progress, cb, err, /*forceCopyFallbackForTests=*/false,
+                                        req.preserveOwnership);
             },
             /*needsDestination=*/true);
     }

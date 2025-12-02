@@ -167,8 +167,6 @@ class MainWindow : public QMainWindow {
 
     void on_actionOpenTerminal_triggered();
     void on_actionCreateLauncher_triggered();
-    void on_actionOpenAsAdmin_triggered();
-    void on_actionOpenAsRoot_triggered();
     void on_actionCopyFullPath_triggered();
     void on_actionFindFiles_triggered();
 

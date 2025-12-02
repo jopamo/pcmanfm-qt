@@ -23,6 +23,10 @@
 #include <libfm-qt6/folderview.h>
 #include <libfm-qt6/core/filepath.h>
 
+#include <QTimer>
+
+class QEvent;
+
 namespace Fm {
 class FileMenu;
 class FolderMenu;
@@ -39,6 +43,7 @@ class View : public Fm::FolderView {
     virtual ~View();
 
     void updateFromSettings(Settings& settings);
+    void setModel(Fm::ProxyFolderModel* _model);
 
     QSize getMargins() const { return Fm::FolderView::getMargins(); }
     void setMargins(QSize size) { Fm::FolderView::setMargins(size); }
@@ -56,6 +61,7 @@ class View : public Fm::FolderView {
     virtual void onFileClicked(int type, const std::shared_ptr<const Fm::FileInfo>& fileInfo);
     virtual void prepareFileMenu(Fm::FileMenu* menu);
     virtual void prepareFolderMenu(Fm::FolderMenu* menu);
+    bool eventFilter(QObject* obj, QEvent* event) override;
 
    private:
     void launchFiles(Fm::FileInfoList files, bool inNewTabs = false);
@@ -63,6 +69,13 @@ class View : public Fm::FolderView {
     void startArchiveCompression(const QStringList& paths);
     void startArchiveExtraction(const QString& archivePath, const QString& destinationDir);
     static void removeLibfmArchiverActions(Fm::FileMenu* menu);
+
+    void setupThumbnailHooks();
+    void scheduleThumbnailPrefetch();
+    void requestVisibleThumbnails();
+
+   private:
+    QTimer thumbnailPrefetchTimer_;
 };
 
 }  // namespace PCManFM

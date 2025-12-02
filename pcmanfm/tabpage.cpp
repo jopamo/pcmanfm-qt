@@ -160,10 +160,11 @@ TabPage::TabPage(QWidget* parent)
     Settings& settings = appSettings();
 
     // create proxy folder model to do item filtering
-    proxyModel_ = new ProxyFolderModel();
+    proxyModel_ = new ImageMagickProxyFolderModel();
     proxyModel_->setShowHidden(settings.showHidden());
     proxyModel_->setBackupAsHidden(settings.backupAsHidden());
     proxyModel_->setShowThumbnails(settings.showThumbnails());
+    proxyModel_->setThumbnailSize(settings.thumbnailIconSize());
 
     connect(proxyModel_, &ProxyFolderModel::sortFilterChanged, this, [this] {
         QToolTip::showText(QPoint(), QString());  // remove the tooltip, if any
@@ -199,6 +200,11 @@ TabPage::TabPage(QWidget* parent)
     // attach proxy model to the folder view; FolderModel is set as source model in chdir()
     folderView_->setModel(proxyModel_);
     verticalLayout->addWidget(folderView_);
+
+    if (auto* viewWidget = folderView_->childView()) {
+        // Leave breathing room at the bottom so the last row is not clipped.
+        viewWidget->viewport()->setContentsMargins(0, 0, 0, 30);
+    }
 
     folderView_->childView()->installEventFilter(this);
     if (settings.noItemTooltip()) {
@@ -602,7 +608,9 @@ void TabPage::chdir(Fm::FilePath newPath, bool addHistory) {
             return;
         }
 
-        if (newPath.hasUriScheme("admin") && !canOpenAdmin()) {
+        if (newPath.hasUriScheme("admin")) {
+            QMessageBox::warning(this, tr("Admin mode disabled"),
+                                 tr("Admin locations are not supported in this build."));
             return;
         }
 
@@ -976,10 +984,6 @@ void TabPage::goToCustomizedViewSource() {
     if (const auto inheritedPath = folderSettings_.inheritedPath()) {
         chdir(inheritedPath);
     }
-}
-
-bool TabPage::canOpenAdmin() {
-    return false;
 }
 
 }  // namespace PCManFM

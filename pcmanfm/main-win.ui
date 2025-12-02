@@ -219,9 +219,6 @@
     <addaction name="actionOpenTerminal"/>
     <addaction name="actionCreateLauncher"/>
     <addaction name="separator"/>
-    <addaction name="actionOpenAsAdmin"/>
-    <addaction name="actionOpenAsRoot"/>
-    <addaction name="separator"/>
     <addaction name="actionCopyFullPath"/>
     <addaction name="actionFindFiles"/>
    </widget>
@@ -253,6 +250,7 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="actionGo"/>
    <addaction name="actionNewTab"/>
    <addaction name="actionGoBack"/>
    <addaction name="actionGoForward"/>
@@ -264,7 +262,6 @@
    <addaction name="actionCompactView"/>
    <addaction name="actionDetailedList"/>
    <addaction name="separator"/>
-   <addaction name="actionGo"/>
    <addaction name="actionMenu"/>
   </widget>
   <action name="actionGoUp">
@@ -739,11 +736,6 @@
     <string>F4</string>
    </property>
   </action>
-  <action name="actionOpenAsRoot">
-   <property name="text">
-    <string>Open Tab in &amp;Root Instance</string>
-   </property>
-  </action>
   <action name="actionEditBookmarks">
    <property name="text">
     <string>&amp;Edit Bookmarks</string>
@@ -934,11 +926,6 @@
   <action name="actionHiddenShortcuts">
    <property name="text">
     <string>Hidden &amp;Shortcuts</string>
-   </property>
-  </action>
-  <action name="actionOpenAsAdmin">
-   <property name="text">
-    <string>Open Tab in &amp;Admin Mode</string>
    </property>
   </action>
   <action name="actionCreateLauncher">

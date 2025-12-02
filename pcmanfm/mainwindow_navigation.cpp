@@ -8,7 +8,6 @@
 #include "tabpage.h"
 
 // Qt Headers
-#include <QMessageBox>
 #include <QStandardPaths>
 #include <QTimer>
 
@@ -103,69 +102,6 @@ void MainWindow::on_actionDesktop_triggered() {
     const QString desktop = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
     if (!desktop.isEmpty()) {
         chdir(Fm::FilePath::fromLocalPath(desktop.toLocal8Bit().constData()));
-    }
-}
-
-void MainWindow::on_actionOpenAsAdmin_triggered() {
-    if (TabPage* page = currentPage()) {
-        if (auto path = page->path()) {
-            if (path.isNative()) {
-                // Construct admin:// URI
-                Fm::CStrPtr admin{g_strconcat("admin://", path.localPath().get(), nullptr)};
-                chdir(Fm::FilePath::fromPathStr(admin.get()));
-            }
-        }
-    }
-}
-
-void MainWindow::on_actionOpenAsRoot_triggered() {
-    TabPage* page = currentPage();
-    if (!page) {
-        return;
-    }
-
-    auto* app = static_cast<Application*>(qApp);
-    Settings& settings = app->settings();
-
-    if (!settings.suCommand().isEmpty()) {
-        // Run the su command
-        // FIXME: Better to detect current binary path dynamically than hardcoding or assuming logic
-        QByteArray suCommand = settings.suCommand().toLocal8Bit();
-        QByteArray programCommand = app->applicationFilePath().toLocal8Bit();
-        programCommand += " %U";
-
-        // if %s exists in the su command, substitute it with the program
-        const int substPos = suCommand.indexOf("%s");
-        if (substPos != -1) {
-            suCommand.replace(substPos, 2, programCommand);
-        }
-        else {
-            suCommand += ' ' + programCommand;
-        }
-
-        // Launch via GAppInfo
-        Fm::GAppInfoPtr appInfo{
-            g_app_info_create_from_commandline(suCommand.constData(), nullptr, GAppInfoCreateFlags(0), nullptr),
-            false  // transfer_ownership
-        };
-
-        if (appInfo) {
-            auto cwd = page->path();
-            Fm::GErrorPtr err;
-            auto uri = cwd.uri();
-            GList* uris = g_list_prepend(nullptr, uri.get());
-
-            if (!g_app_info_launch_uris(appInfo.get(), uris, nullptr, &err)) {
-                QMessageBox::critical(this, tr("Error"), QString::fromUtf8(err->message));
-            }
-
-            g_list_free(uris);
-        }
-    }
-    else {
-        // Show error and open preferences
-        QMessageBox::critical(this, tr("Error"), tr("Switch user command is not set"));
-        app->preferences(QStringLiteral("advanced"));
     }
 }
 

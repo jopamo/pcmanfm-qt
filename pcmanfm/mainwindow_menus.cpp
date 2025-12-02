@@ -278,7 +278,6 @@ void MainWindow::updateUIForCurrentPage(bool setFocus) {
         if (auto path = tabPage->path()) {
             isNative = path.isNative();
         }
-        ui.actionOpenAsAdmin->setEnabled(isNative);
 
         updateViewMenuForCurrentPage();
         updateStatusBarForCurrentPage();

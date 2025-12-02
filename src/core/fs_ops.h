@@ -49,14 +49,16 @@ bool copy_path(const std::string& source,
                const std::string& destination,
                ProgressInfo& progress,
                const ProgressCallback& callback,
-               Error& err);
+               Error& err,
+               bool preserveOwnership = false);
 
 bool move_path(const std::string& source,
                const std::string& destination,
                ProgressInfo& progress,
                const ProgressCallback& callback,
                Error& err,
-               bool forceCopyFallbackForTests = false);
+               bool forceCopyFallbackForTests = false,
+               bool preserveOwnership = false);
 
 bool delete_path(const std::string& path, ProgressInfo& progress, const ProgressCallback& callback, Error& err);
 

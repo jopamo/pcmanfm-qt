@@ -22,11 +22,13 @@
 #include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
+#include <QSizePolicy>
 #include <QShortcut>
 #include <QSplitter>
 #include <QStyle>
 #include <QTimer>
 #include <QToolButton>
+#include <unistd.h>
 #include "../src/ui/fsqt.h"
 
 // LibFM-Qt Headers
@@ -76,6 +78,17 @@ MainWindow::MainWindow(Fm::FilePath path)
 
     if (ui.statusbar) {
         ui.statusbar->addPermanentWidget(fsInfoLabel_);
+
+        if (geteuid() == 0) {
+            auto* rootWarning = new QLabel(tr("Running as root. Privilege escalation is disabled."), this);
+            rootWarning->setObjectName(QStringLiteral("rootWarningLabel"));
+            rootWarning->setAlignment(Qt::AlignCenter);
+            rootWarning->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+            rootWarning->setStyleSheet(
+                QStringLiteral("#rootWarningLabel { background-color: #b71c1c; color: white; padding: 4px 8px; "
+                               "font-weight: bold; border-radius: 3px; }"));
+            ui.statusbar->insertPermanentWidget(0, rootWarning, 1);
+        }
     }
 
     Settings& settings = appSettings();

@@ -13,19 +13,28 @@
 #include <QDialogButtonBox>
 #include <QFile>
 #include <QFontDatabase>
+#include <QFormLayout>
 #include <QGroupBox>
 #include <QHash>
 #include <QIcon>
+#include <QInputDialog>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMessageBox>
 #include <QPointer>
 #include <QPushButton>
+#include <QCheckBox>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QProgressDialog>
 #include <QPlainTextEdit>
+#include <QAbstractItemView>
+#include <QAbstractItemModel>
+#include <QEvent>
 #include <QClipboard>
+#include <QSpinBox>
 #include <QStringList>
+#include <QScrollBar>
 #include <QVBoxLayout>
 
 #include <string>
@@ -42,6 +51,8 @@
 #include "launcher.h"
 #include "mainwindow.h"
 #include "settings.h"
+#include "imagemagick_qt.h"
+#include "image_viewer_window.h"
 #include "../src/core/fs_ops.h"
 #include "../src/ui/archivejob.h"
 #include "../src/ui/archiveextractjob.h"
@@ -114,6 +125,53 @@ bool isDisassemblySupported(const QString& path) {
     return doc.arch() != PCManFM::CpuArch::Unknown && doc.size() > 0;
 }
 
+QModelIndexList indexesInRect(QAbstractItemView* view, const QRect& rect) {
+    QModelIndexList result;
+    if (!view || !view->model() || !rect.isValid()) {
+        return result;
+    }
+
+    const QModelIndex root = view->rootIndex();
+    const int rowCount = view->model()->rowCount(root);
+    if (rowCount <= 0) {
+        return result;
+    }
+
+    int startRow = -1;
+    const QPoint probes[] = {rect.topLeft(), rect.center(), rect.bottomLeft()};
+    for (const QPoint& probe : probes) {
+        QModelIndex probeIndex = view->indexAt(probe);
+        if (probeIndex.isValid()) {
+            startRow = probeIndex.row();
+            break;
+        }
+    }
+    if (startRow < 0) {
+        startRow = 0;
+    }
+
+    for (int row = startRow; row < rowCount; ++row) {
+        const QModelIndex idx = view->model()->index(row, 0, root);
+        if (!idx.isValid()) {
+            continue;
+        }
+
+        const QRect itemRect = view->visualRect(idx);
+        if (!itemRect.isValid()) {
+            continue;
+        }
+        if (itemRect.top() > rect.bottom()) {
+            break;
+        }
+        if (itemRect.bottom() < rect.top()) {
+            continue;
+        }
+        result.push_back(idx);
+    }
+
+    return result;
+}
+
 }  // namespace
 
 void View::removeLibfmArchiverActions(Fm::FileMenu* menu) {
@@ -132,10 +190,22 @@ void View::removeLibfmArchiverActions(Fm::FileMenu* menu) {
 }
 
 View::View(Fm::FolderView::ViewMode mode, QWidget* parent) : Fm::FolderView(mode, parent) {
+    thumbnailPrefetchTimer_.setParent(this);
+    thumbnailPrefetchTimer_.setSingleShot(true);
+    thumbnailPrefetchTimer_.setInterval(40);
+    connect(&thumbnailPrefetchTimer_, &QTimer::timeout, this, &View::requestVisibleThumbnails);
+    setupThumbnailHooks();
+    scheduleThumbnailPrefetch();
     updateFromSettings(appSettings());
 }
 
 View::~View() = default;
+
+void View::setModel(Fm::ProxyFolderModel* _model) {
+    Fm::FolderView::setModel(_model);
+    setupThumbnailHooks();
+    scheduleThumbnailPrefetch();
+}
 
 void View::onFileClicked(int type, const std::shared_ptr<const Fm::FileInfo>& fileInfo) {
     if (type == MiddleClick) {
@@ -156,6 +226,20 @@ void View::onFileClicked(int type, const std::shared_ptr<const Fm::FileInfo>& fi
         auto files = selectedFiles();
         if (files.empty()) {
             return;
+        }
+
+        // Internal image viewer: handle single native image before delegating to external launcher
+        if (files.size() == 1) {
+            const auto& file = files.front();
+            if (file && file->isImage() && file->isNative() && ImageMagickSupport::isAvailable()) {
+                auto localPath = file->path().localPath();
+                if (localPath) {
+                    const QString path = QString::fromUtf8(localPath.get());
+                    auto* viewer = new ImageViewerWindow(path, window());
+                    viewer->show();
+                    return;
+                }
+            }
         }
 
         // Prompt user if trying to open too many files at once
@@ -653,6 +737,133 @@ void View::prepareFileMenu(Fm::FileMenu* menu) {
                                  menu);
             connect(action, &QAction::triggered, this, &View::onOpenInHexEditor);
             menu->insertAction(menu->separator3(), action);
+
+            QString magickPath;
+            if (ImageMagickSupport::isAvailable() && files.size() == 1) {
+                const auto& file = files.front();
+                if (file && !file->isDir() && file->isImage() && file->isNative()) {
+                    if (auto localPath = file->path().localPath()) {
+                        magickPath = QString::fromUtf8(localPath.get());
+                    }
+                }
+            }
+
+            if (!magickPath.isEmpty()) {
+                auto* convertAction =
+                    new QAction(QIcon::fromTheme(QStringLiteral("image-convert")), tr("Convert Image…"), menu);
+                connect(convertAction, &QAction::triggered, this, [this, magickPath] {
+                    bool ok = false;
+                    const QString format =
+                        QInputDialog::getText(window(), tr("Convert Image"), tr("Output format (e.g. png, jpg, webp):"),
+                                              QLineEdit::Normal, QStringLiteral("png"), &ok)
+                            .trimmed();
+                    if (!ok || format.isEmpty()) {
+                        return;
+                    }
+
+                    const QFileInfo srcInfo(magickPath);
+                    const QString suggested = srcInfo.absolutePath() + QLatin1Char('/') + srcInfo.completeBaseName() +
+                                              QLatin1Char('.') + format.toLower();
+                    const QString dstPath =
+                        QFileDialog::getSaveFileName(window(), tr("Save Converted Image"), suggested);
+                    if (dstPath.isEmpty()) {
+                        return;
+                    }
+
+                    if (!ImageMagickSupport::convertFormat(magickPath, dstPath, format.toLatin1())) {
+                        QMessageBox::warning(window(), tr("Image conversion failed"),
+                                             tr("Could not convert %1").arg(srcInfo.fileName()));
+                    }
+                });
+                menu->insertAction(menu->separator3(), convertAction);
+
+                auto* resizeAction =
+                    new QAction(QIcon::fromTheme(QStringLiteral("transform-scale")), tr("Resize Image…"), menu);
+                connect(resizeAction, &QAction::triggered, this, [this, magickPath] {
+                    ImageMagickInfo info;
+                    ImageMagickSupport::probe(magickPath, info);
+
+                    QDialog dialog(window());
+                    dialog.setWindowTitle(tr("Resize Image"));
+
+                    auto* layout = new QFormLayout(&dialog);
+                    auto* widthBox = new QSpinBox(&dialog);
+                    auto* heightBox = new QSpinBox(&dialog);
+                    widthBox->setRange(1, 32768);
+                    heightBox->setRange(1, 32768);
+                    if (info.width > 0) {
+                        widthBox->setValue(static_cast<int>(std::min<quint64>(info.width, 32768)));
+                    }
+                    else {
+                        widthBox->setValue(1024);
+                    }
+                    if (info.height > 0) {
+                        heightBox->setValue(static_cast<int>(std::min<quint64>(info.height, 32768)));
+                    }
+                    else {
+                        heightBox->setValue(768);
+                    }
+                    auto* keepAspect = new QCheckBox(tr("Preserve aspect ratio"), &dialog);
+                    keepAspect->setChecked(true);
+
+                    layout->addRow(tr("Width (px):"), widthBox);
+                    layout->addRow(tr("Height (px):"), heightBox);
+                    layout->addRow(QString(), keepAspect);
+
+                    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+                    layout->addWidget(buttons);
+                    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+                    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+                    if (dialog.exec() != QDialog::Accepted) {
+                        return;
+                    }
+
+                    const QFileInfo srcInfo(magickPath);
+                    const QString suggested = srcInfo.absolutePath() + QLatin1Char('/') + srcInfo.completeBaseName() +
+                                              QStringLiteral("_resized.") + srcInfo.suffix();
+                    const QString dstPath =
+                        QFileDialog::getSaveFileName(window(), tr("Save Resized Image"), suggested, QString(), nullptr,
+                                                     QFileDialog::DontConfirmOverwrite);
+                    if (dstPath.isEmpty()) {
+                        return;
+                    }
+
+                    if (!ImageMagickSupport::resizeImage(magickPath, dstPath, widthBox->value(), heightBox->value(),
+                                                         keepAspect->isChecked())) {
+                        QMessageBox::warning(window(), tr("Image resize failed"),
+                                             tr("Could not resize %1").arg(srcInfo.fileName()));
+                    }
+                });
+                menu->insertAction(menu->separator3(), resizeAction);
+
+                auto* rotateAction =
+                    new QAction(QIcon::fromTheme(QStringLiteral("object-rotate-right")), tr("Rotate Image…"), menu);
+                connect(rotateAction, &QAction::triggered, this, [this, magickPath] {
+                    bool ok = false;
+                    const double degrees = QInputDialog::getDouble(window(), tr("Rotate Image"), tr("Degrees:"), 90.0,
+                                                                   -3600.0, 3600.0, 1, &ok);
+                    if (!ok) {
+                        return;
+                    }
+
+                    const QFileInfo srcInfo(magickPath);
+                    const QString suggested = srcInfo.absolutePath() + QLatin1Char('/') + srcInfo.completeBaseName() +
+                                              QStringLiteral("_rotated.") + srcInfo.suffix();
+                    const QString dstPath =
+                        QFileDialog::getSaveFileName(window(), tr("Save Rotated Image"), suggested, QString(), nullptr,
+                                                     QFileDialog::DontConfirmOverwrite);
+                    if (dstPath.isEmpty()) {
+                        return;
+                    }
+
+                    if (!ImageMagickSupport::rotateImage(magickPath, dstPath, degrees)) {
+                        QMessageBox::warning(window(), tr("Image rotation failed"),
+                                             tr("Could not rotate %1").arg(srcInfo.fileName()));
+                    }
+                });
+                menu->insertAction(menu->separator3(), rotateAction);
+            }
         }
 
         // Special handling for search results
@@ -731,6 +942,67 @@ void View::prepareFolderMenu(Fm::FolderMenu* menu) {
     }
 }
 
+void View::setupThumbnailHooks() {
+    auto* itemView = childView();
+    if (!itemView) {
+        return;
+    }
+
+    if (auto* viewport = itemView->viewport()) {
+        viewport->installEventFilter(this);
+    }
+
+    if (auto* vbar = itemView->verticalScrollBar()) {
+        connect(vbar, &QScrollBar::valueChanged, this, &View::scheduleThumbnailPrefetch, Qt::UniqueConnection);
+    }
+    if (auto* hbar = itemView->horizontalScrollBar()) {
+        connect(hbar, &QScrollBar::valueChanged, this, &View::scheduleThumbnailPrefetch, Qt::UniqueConnection);
+    }
+
+    if (auto* mdl = itemView->model()) {
+        connect(mdl, &QAbstractItemModel::modelReset, this, &View::scheduleThumbnailPrefetch, Qt::UniqueConnection);
+        connect(mdl, &QAbstractItemModel::layoutChanged, this, &View::scheduleThumbnailPrefetch, Qt::UniqueConnection);
+        connect(mdl, &QAbstractItemModel::rowsInserted, this, &View::scheduleThumbnailPrefetch, Qt::UniqueConnection);
+    }
+}
+
+void View::scheduleThumbnailPrefetch() {
+    if (!thumbnailPrefetchTimer_.isActive()) {
+        thumbnailPrefetchTimer_.start();
+    }
+}
+
+bool View::eventFilter(QObject* obj, QEvent* event) {
+    auto* itemView = childView();
+    if (itemView && obj == itemView->viewport() &&
+        (event->type() == QEvent::Resize || event->type() == QEvent::LayoutRequest)) {
+        scheduleThumbnailPrefetch();
+    }
+
+    return Fm::FolderView::eventFilter(obj, event);
+}
+
+void View::requestVisibleThumbnails() {
+    auto* proxy = dynamic_cast<ImageMagickProxyFolderModel*>(model());
+    auto* itemView = childView();
+    if (!proxy || !itemView || !itemView->viewport()) {
+        return;
+    }
+
+    QRect rect = itemView->viewport()->rect();
+    if (!rect.isValid()) {
+        return;
+    }
+
+    const int predictiveMargin = rect.height() / 2;
+    rect.adjust(0, -predictiveMargin, 0, predictiveMargin);
+
+    const QModelIndexList indexes = indexesInRect(itemView, rect);
+    if (!indexes.isEmpty()) {
+        proxy->prefetchThumbnails(indexes);
+    }
+}
+
 void View::updateFromSettings(Settings& settings) {
     setIconSize(Fm::FolderView::IconMode, QSize(settings.bigIconSize(), settings.bigIconSize()));
     setIconSize(Fm::FolderView::CompactMode, QSize(settings.smallIconSize(), settings.smallIconSize()));
@@ -748,7 +1020,11 @@ void View::updateFromSettings(Settings& settings) {
     if (auto* proxyModel = dynamic_cast<Fm::ProxyFolderModel*>(model())) {
         proxyModel->setShowThumbnails(settings.showThumbnails());
         proxyModel->setBackupAsHidden(settings.backupAsHidden());
+        if (auto* magickProxy = dynamic_cast<ImageMagickProxyFolderModel*>(proxyModel)) {
+            magickProxy->setThumbnailSize(settings.thumbnailIconSize());
+        }
     }
+    scheduleThumbnailPrefetch();
 }
 
 void View::launchFiles(Fm::FileInfoList files, bool inNewTabs) {

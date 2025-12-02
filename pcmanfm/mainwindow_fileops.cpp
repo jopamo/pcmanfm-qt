@@ -28,6 +28,7 @@
 #include <QMessageBox>
 #include <QObject>
 #include <QtGlobal>
+#include <unistd.h>
 #include <memory>
 
 namespace PCManFM {
@@ -38,6 +39,10 @@ Settings& appSettings() {
     auto* app = qobject_cast<Application*>(qApp);
     Q_ASSERT(app);
     return app->settings();
+}
+
+bool shouldPreserveOwnershipForOps() {
+    return appSettings().preservePermissions();
 }
 
 QStringList filePathListToStringList(const Fm::FilePathList& paths) {
@@ -81,8 +86,10 @@ bool renameFileWithBackend(const std::shared_ptr<const Fm::FileInfo>& file, QWid
 
         const std::string srcNative = QFile::encodeName(currentPath).toStdString();
         const std::string dstNative = QFile::encodeName(newPath).toStdString();
+        const bool preserveOwnership = shouldPreserveOwnershipForOps();
 
-        if (FsOps::move_path(srcNative, dstNative, progress, cb, err)) {
+        if (FsOps::move_path(srcNative, dstNative, progress, cb, err, /*forceCopyFallbackForTests=*/false,
+                             preserveOwnership)) {
             return true;
         }
 
@@ -238,6 +245,7 @@ void MainWindow::on_actionDelete_triggered() {
     req.destination.clear();
     req.followSymlinks = false;
     req.overwriteExisting = false;
+    req.preserveOwnership = shouldPreserveOwnershipForOps();
 
     fileOpsPtr->start(req);
 }

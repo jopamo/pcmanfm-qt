@@ -22,6 +22,7 @@ struct FileOpRequest {
     QString destination;
     bool followSymlinks;
     bool overwriteExisting;
+    bool preserveOwnership = false;
 };
 
 struct FileOpProgress {

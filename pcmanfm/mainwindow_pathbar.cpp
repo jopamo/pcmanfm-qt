@@ -8,6 +8,7 @@
 #include "tabpage.h"
 
 // Qt Headers
+#include <QSizePolicy>
 #include <QToolBar>  // Ensure toolBar access
 
 // LibFM-Qt Headers
@@ -102,6 +103,10 @@ void MainWindow::createSingleViewPathBar(bool usePathButtons) {
     }
 
     if (bar && ui.toolBar) {
+        bar->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        bar->setMinimumWidth(260);
+        bar->setMaximumWidth(520);
+
         ui.toolBar->insertWidget(ui.actionGo, bar);
         ui.actionGo->setVisible(!usePathButtons);
     }

@@ -1,7 +1,6 @@
 [System]
 IconThemeName=elementary
 FallbackIconThemeName=Papirus-Dark
-SuCommand=lxsudo dbus-run-session -- %s
 Archiver=lxqt-archiver
 SIUnit=false
 Terminal=qterminal

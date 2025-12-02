@@ -26,6 +26,7 @@
 #include <libfm-qt6/browsehistory.h>
 #include "view.h"
 #include "settings.h"
+#include "imagemagick_qt.h"
 
 #include <libfm-qt6/core/fileinfo.h>
 #include <libfm-qt6/core/filepath.h>
@@ -259,12 +260,10 @@ class TabPage : public QWidget {
     void onFolderUnmount();
     void onFolderContentChanged();
 
-    bool canOpenAdmin();
-
    private:
     View* folderView_;
     Fm::CachedFolderModel* folderModel_;
-    Fm::ProxyFolderModel* proxyModel_;
+    ImageMagickProxyFolderModel* proxyModel_;
     ProxyFilter* proxyFilter_;
     QVBoxLayout* verticalLayout;
     std::shared_ptr<Fm::Folder> folder_;

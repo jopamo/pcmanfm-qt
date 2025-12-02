@@ -151,9 +151,8 @@ class Settings : public QObject {
 
     void setBookmarkOpenMethod(OpenDirTargetType bookmarkOpenMethod) { bookmarkOpenMethod_ = bookmarkOpenMethod; }
 
-    QString suCommand() const { return suCommand_; }
-
-    void setSuCommand(QString suCommand) { suCommand_ = suCommand; }
+    bool preservePermissions() const { return preservePermissions_; }
+    void setPreservePermissions(bool preserve) { preservePermissions_ = preserve; }
 
     QString terminal() { return terminal_; }
     void setTerminal(QString terminalCommand);
@@ -538,7 +537,7 @@ class Settings : public QObject {
 
     bool singleWindowMode_;
     OpenDirTargetType bookmarkOpenMethod_;
-    QString suCommand_;
+    bool preservePermissions_;
     QString terminal_;
 
     bool alwaysShowTabs_;

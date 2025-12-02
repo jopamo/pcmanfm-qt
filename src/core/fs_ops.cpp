@@ -204,7 +204,8 @@ bool copy_symlink_at(int srcDir,
                      int dstDir,
                      const char* dstName,
                      const StatInfo& info,
-                     Error& err) {
+                     Error& err,
+                     bool preserveOwnership) {
     std::vector<char> buf(static_cast<std::size_t>(info.st.st_size) + 1);
     ssize_t len = ::readlinkat(srcDir, srcName, buf.data(), buf.size());
     if (len < 0) {
@@ -221,6 +222,9 @@ bool copy_symlink_at(int srcDir,
     times[0] = info.st.st_atim;
     times[1] = info.st.st_mtim;
     ::utimensat(dstDir, dstName, times, AT_SYMLINK_NOFOLLOW);  // best effort
+    if (preserveOwnership) {
+        ::fchownat(dstDir, dstName, info.st.st_uid, info.st.st_gid, AT_SYMLINK_NOFOLLOW);  // best effort
+    }
     return true;
 }
 
@@ -231,7 +235,8 @@ bool copy_file_at(int srcDir,
                   const StatInfo& info,
                   ProgressInfo& progress,
                   const ProgressCallback& cb,
-                  Error& err) {
+                  Error& err,
+                  bool preserveOwnership) {
     progress.bytesTotal += static_cast<std::uint64_t>(info.st.st_size);
 
     Fd in_fd(::openat(srcDir, srcName, O_RDONLY | O_CLOEXEC));
@@ -279,6 +284,11 @@ bool copy_file_at(int srcDir,
     times[1] = info.st.st_mtim;
     ::futimens(out_fd.fd, times);  // best effort; ignore errors
 
+    if (preserveOwnership) {
+        ::fchown(out_fd.fd, info.st.st_uid, info.st.st_gid);  // best effort
+    }
+    ::fchmod(out_fd.fd, info.st.st_mode & 07777);  // best effort to match source mode, ignore umask
+
     if (::fsync(out_fd.fd) < 0) {
         set_error(err, "fsync");
         return false;
@@ -294,7 +304,8 @@ bool copy_dir_at(int srcDir,
                  ProgressInfo& progress,
                  const ProgressCallback& cb,
                  Error& err,
-                 int depth);
+                 int depth,
+                 bool preserveOwnership);
 
 bool copy_entry_at(int srcDir,
                    const char* srcName,
@@ -303,7 +314,8 @@ bool copy_entry_at(int srcDir,
                    ProgressInfo& progress,
                    const ProgressCallback& cb,
                    Error& err,
-                   int depth) {
+                   int depth,
+                   bool preserveOwnership) {
     if (depth > kMaxRecursionDepth) {
         err.code = ELOOP;
         err.message = "Maximum recursion depth exceeded";
@@ -323,13 +335,13 @@ bool copy_entry_at(int srcDir,
     }
 
     if (S_ISDIR(info.st.st_mode)) {
-        return copy_dir_at(srcDir, srcName, dstDir, dstName, progress, cb, err, depth + 1);
+        return copy_dir_at(srcDir, srcName, dstDir, dstName, progress, cb, err, depth + 1, preserveOwnership);
     }
     if (S_ISREG(info.st.st_mode)) {
-        return copy_file_at(srcDir, srcName, dstDir, dstName, info, progress, cb, err);
+        return copy_file_at(srcDir, srcName, dstDir, dstName, info, progress, cb, err, preserveOwnership);
     }
     if (S_ISLNK(info.st.st_mode)) {
-        return copy_symlink_at(srcDir, srcName, dstDir, dstName, info, err);
+        return copy_symlink_at(srcDir, srcName, dstDir, dstName, info, err, preserveOwnership);
     }
 
     // Unsupported special file types
@@ -345,7 +357,8 @@ bool copy_dir_at(int srcDir,
                  ProgressInfo& progress,
                  const ProgressCallback& cb,
                  Error& err,
-                 int depth) {
+                 int depth,
+                 bool preserveOwnership) {
     StatInfo info;
     if (!stat_at(srcDir, srcName, /*follow=*/false, info, err)) {
         return false;
@@ -399,7 +412,7 @@ bool copy_dir_at(int srcDir,
             continue;
         }
 
-        if (!copy_entry_at(dirfd(dir.dir), child, newDst.fd, child, progress, cb, err, depth + 1)) {
+        if (!copy_entry_at(dirfd(dir.dir), child, newDst.fd, child, progress, cb, err, depth + 1, preserveOwnership)) {
             return false;
         }
     }
@@ -409,6 +422,10 @@ bool copy_dir_at(int srcDir,
     times[0] = info.st.st_atim;
     times[1] = info.st.st_mtim;
     ::utimensat(dstDir, dstName, times, 0);
+    if (preserveOwnership) {
+        ::fchownat(dstDir, dstName, info.st.st_uid, info.st.st_gid, AT_SYMLINK_NOFOLLOW);
+    }
+    ::fchmodat(dstDir, dstName, info.st.st_mode & 07777, AT_SYMLINK_NOFOLLOW);
 
     return true;
 }
@@ -615,7 +632,8 @@ bool copy_path(const std::string& source,
                const std::string& destination,
                ProgressInfo& progress,
                const ProgressCallback& callback,
-               Error& err) {
+               Error& err,
+               bool preserveOwnership) {
     err = {};
 
     // Ensure destination parent exists
@@ -663,8 +681,8 @@ bool copy_path(const std::string& source,
 
     bool ok = false;
     if (srcIsDir) {
-        ok =
-            copy_dir_at(srcParentFd.fd, srcName.c_str(), destParentFd.fd, destName.c_str(), progress, callback, err, 0);
+        ok = copy_dir_at(srcParentFd.fd, srcName.c_str(), destParentFd.fd, destName.c_str(), progress, callback, err, 0,
+                         preserveOwnership);
         if (!ok) {
             // best-effort cleanup
             Error cleanupErr;
@@ -673,7 +691,7 @@ bool copy_path(const std::string& source,
     }
     else if (S_ISREG(rootInfo.st.st_mode) || S_ISLNK(rootInfo.st.st_mode)) {
         ok = copy_entry_at(srcParentFd.fd, srcName.c_str(), destParentFd.fd, destName.c_str(), progress, callback, err,
-                           0);
+                           0, preserveOwnership);
         if (!ok) {
             Error cleanupErr;
             delete_path(destination, progress, ProgressCallback(), cleanupErr);
@@ -696,7 +714,8 @@ bool move_path(const std::string& source,
                ProgressInfo& progress,
                const ProgressCallback& callback,
                Error& err,
-               bool forceCopyFallbackForTests) {
+               bool forceCopyFallbackForTests,
+               bool preserveOwnership) {
     err = {};
 
     if (!forceCopyFallbackForTests && ::rename(source.c_str(), destination.c_str()) == 0) {
@@ -712,7 +731,7 @@ bool move_path(const std::string& source,
     }
 
     // Cross-device or forced fallback: copy then delete
-    if (!copy_path(source, destination, progress, callback, err)) {
+    if (!copy_path(source, destination, progress, callback, err, preserveOwnership)) {
         return false;
     }
 

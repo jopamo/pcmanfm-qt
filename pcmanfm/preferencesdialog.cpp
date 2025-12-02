@@ -338,11 +338,10 @@ void PreferencesDialog::initAdvancedPage(Settings& settings) {
     initArchivers(settings);
     initTerminals(settings);
 
-    ui.suCommand->setText(settings.suCommand());
-
     ui.onlyUserTemplates->setChecked(settings.onlyUserTemplates());
     ui.templateTypeOnce->setChecked(settings.templateTypeOnce());
     ui.templateRunApp->setChecked(settings.templateRunApp());
+    ui.preservePermissions->setChecked(settings.preservePermissions());
 
     // option currently not wired to behavior, keep hidden until support is implemented
     ui.templateRunApp->hide();
@@ -484,8 +483,8 @@ void PreferencesDialog::applyTerminal(Settings& settings) {
 void PreferencesDialog::applyAdvancedPage(Settings& settings) {
     applyTerminal(settings);
 
-    settings.setSuCommand(ui.suCommand->text());
     settings.setArchiver(ui.archiver->currentData().toString());
+    settings.setPreservePermissions(ui.preservePermissions->isChecked());
 
     settings.setOnlyUserTemplates(ui.onlyUserTemplates->isChecked());
     settings.setTemplateTypeOnce(ui.templateTypeOnce->isChecked());

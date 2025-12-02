@@ -1,3 +1,9 @@
+find_package(PkgConfig QUIET)
+
+if(PKG_CONFIG_FOUND)
+    pkg_check_modules(MAGICKWAND MagickWand)
+endif()
+
 set(pcmanfm_SRCS
     application.cpp
     pcmanfm.cpp
@@ -17,6 +23,12 @@ set(pcmanfm_SRCS
     statusbar.cpp
     view.cpp
     launcher.cpp
+    imagemagick_support.cpp
+    imagemagick_support.h
+    image_viewer_window.cpp
+    image_viewer_window.h
+    imagemagick_qt.cpp
+    imagemagick_qt.h
     preferencesdialog.cpp
     xdgdir.cpp
     connectserverdialog.cpp
@@ -130,6 +142,13 @@ target_link_libraries(pcmanfm-qt
     ${LIBARCHIVE_LIBRARIES}
     ${CAPSTONE_LIBRARIES}
 )
+
+if(MAGICKWAND_FOUND)
+    target_include_directories(pcmanfm-qt PRIVATE ${MAGICKWAND_INCLUDE_DIRS})
+    target_link_libraries(pcmanfm-qt ${MAGICKWAND_LIBRARIES})
+    target_compile_options(pcmanfm-qt PRIVATE ${MAGICKWAND_CFLAGS_OTHER})
+    target_compile_definitions(pcmanfm-qt PRIVATE HAVE_MAGICKWAND)
+endif()
 
 install(TARGETS pcmanfm-qt RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 

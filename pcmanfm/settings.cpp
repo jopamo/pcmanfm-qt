@@ -54,7 +54,7 @@ Settings::Settings()
       useFallbackIconTheme_(QIcon::themeName().isEmpty() || QIcon::themeName() == QLatin1String("hicolor")),
       singleWindowMode_(false),
       bookmarkOpenMethod_(OpenInCurrentTab),
-      suCommand_(),
+      preservePermissions_(false),
       terminal_(),
       alwaysShowTabs_(true),
       showTabClose_(true),
@@ -180,7 +180,6 @@ bool Settings::loadFile(QString filePath) {
         // Use Papirus-Dark as fallback icon theme
         fallbackIconThemeName_ = QLatin1String("Papirus-Dark");  // fallback icon theme name
     }
-    suCommand_ = settings.value(QStringLiteral("SuCommand"), QStringLiteral("lxqt-sudo %s")).toString();
     setTerminal(settings.value(QStringLiteral("Terminal"), QStringLiteral("xterm")).toString());
     setArchiver(settings.value(QStringLiteral("Archiver"), QStringLiteral("file-roller")).toString());
     setSiUnit(settings.value(QStringLiteral("SIUnit"), false).toBool());
@@ -194,6 +193,7 @@ bool Settings::loadFile(QString filePath) {
     settings.beginGroup(QStringLiteral("Behavior"));
     singleWindowMode_ = settings.value(QStringLiteral("SingleWindowMode"), false).toBool();
     bookmarkOpenMethod_ = bookmarkOpenMethodFromString(settings.value(QStringLiteral("BookmarkOpenMethod")).toString());
+    preservePermissions_ = settings.value(QStringLiteral("PreservePermissions"), false).toBool();
     // settings for use with libfm
     useTrash_ = false;  // trash disabled
     singleClick_ = settings.value(QStringLiteral("SingleClick"), false).toBool();
@@ -297,7 +297,6 @@ bool Settings::saveFile(QString filePath) {
 
     settings.beginGroup(QStringLiteral("System"));
     settings.setValue(QStringLiteral("FallbackIconThemeName"), fallbackIconThemeName_);
-    settings.setValue(QStringLiteral("SuCommand"), suCommand_);
     settings.setValue(QStringLiteral("Terminal"), terminal_);
     settings.setValue(QStringLiteral("Archiver"), archiver_);
     settings.setValue(QStringLiteral("SIUnit"), siUnit_);
@@ -312,6 +311,7 @@ bool Settings::saveFile(QString filePath) {
     settings.setValue(QStringLiteral("SingleWindowMode"), singleWindowMode_);
     settings.setValue(QStringLiteral("BookmarkOpenMethod"),
                       QString::fromUtf8(bookmarkOpenMethodToString(bookmarkOpenMethod_)));
+    settings.setValue(QStringLiteral("PreservePermissions"), preservePermissions_);
     // settings for use with libfm
     settings.setValue(QStringLiteral("UseTrash"), useTrash_);
     settings.setValue(QStringLiteral("SingleClick"), singleClick_);
