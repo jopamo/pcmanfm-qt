@@ -65,7 +65,7 @@ bool DisasmEngine::configure(CpuArch arch, bool littleEndian) {
             csMode = CS_MODE_32;
             break;
         case CpuArch::ARM64:
-            csArch = CS_ARCH_AARCH64;
+            csArch = CS_ARCH_ARM64;
             csMode = CS_MODE_LITTLE_ENDIAN;
             break;
         case CpuArch::ARM:
