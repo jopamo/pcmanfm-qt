@@ -1,138 +1,160 @@
 cmake_minimum_required(VERSION 3.18)
 
-# Find Qt6 Test components
 find_package(Qt6 REQUIRED COMPONENTS Test)
+include(CMakeParseArguments)
 
-# Basic sanity tests
-add_executable(pcmanfm-qt-basic-tests
-    test_basic.cpp
-)
-
-target_link_libraries(pcmanfm-qt-basic-tests
+set(PCMANFM_TEST_LIBS
     Qt6::Test
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
 )
 
-target_include_directories(pcmanfm-qt-basic-tests PRIVATE
+set(PCMANFM_TEST_INCLUDES
+    ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/pcmanfm
 )
 
-add_test(NAME pcmanfm-qt-basic-tests COMMAND pcmanfm-qt-basic-tests)
-set_tests_properties(pcmanfm-qt-basic-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+function(pcmanfm_add_test target)
+    cmake_parse_arguments(ARG "" "" "SOURCES;LIBS;INCLUDES" ${ARGN})
 
-# POSIX filesystem core tests
-add_executable(pcmanfm-qt-fs-tests
-    fs_ops_test.cpp
+    add_executable(${target} ${ARG_SOURCES})
+    target_link_libraries(${target} PRIVATE ${PCMANFM_TEST_LIBS} ${ARG_LIBS})
+    target_include_directories(${target} PRIVATE ${PCMANFM_TEST_INCLUDES} ${ARG_INCLUDES})
+
+    add_test(NAME ${target} COMMAND ${target})
+    set_tests_properties(${target} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+endfunction()
+
+pcmanfm_add_test(pcmanfm-qt-basic-tests
+    SOURCES
+        test_basic.cpp
+)
+
+pcmanfm_add_test(pcmanfm-qt-core-utils-tests
+    SOURCES
+        test_core_utils.cpp
+)
+
+pcmanfm_add_test(pcmanfm-qt-fs-tests
+    SOURCES
+        fs_ops_test.cpp
+        ../src/core/fs_ops.cpp
+    LIBS
+        ${BLAKE3_LIBRARIES}
+    INCLUDES
+        ${BLAKE3_INCLUDE_DIRS}
+)
+
+pcmanfm_add_test(pcmanfm-qt-ops-tests
+    SOURCES
+        qt_fileops_test.cpp
+        ../src/backends/qt/qt_fileops.cpp
+        ../src/core/ifileops.cpp
+        ../src/core/fs_ops.cpp
+    LIBS
+        ${BLAKE3_LIBRARIES}
+    INCLUDES
+        ${BLAKE3_INCLUDE_DIRS}
+)
+
+pcmanfm_add_test(pcmanfm-qt-archive-tests
+    SOURCES
+        archive_extract_test.cpp
+        ../src/core/archive_extract.cpp
+        ../src/core/fs_ops.cpp
+    LIBS
+        ${LIBARCHIVE_LIBRARIES}
+        ${BLAKE3_LIBRARIES}
+    INCLUDES
+        ${LIBARCHIVE_INCLUDE_DIRS}
+        ${BLAKE3_INCLUDE_DIRS}
+)
+
+pcmanfm_add_test(pcmanfm-qt-windowed-reader-tests
+    SOURCES
+        windowed_file_reader_test.cpp
+        ../src/core/windowed_file_reader.cpp
+)
+
+pcmanfm_add_test(pcmanfm-qt-disasm-tests
+    SOURCES
+        disasm_engine_test.cpp
+        ../src/ui/disasm_engine.cpp
+    LIBS
+        ${CAPSTONE_LIBRARIES}
+    INCLUDES
+        ${CAPSTONE_INCLUDE_DIRS}
+)
+
+set(PCMANFM_SETTINGS_SOURCES
+    ../pcmanfm/settings.cpp
+    ../pcmanfm/settings.h
+    ../src/ui/fsqt.cpp
     ../src/core/fs_ops.cpp
 )
 
-target_link_libraries(pcmanfm-qt-fs-tests
-    Qt6::Test
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
+set(PCMANFM_SETTINGS_LIBS
+    fm-qt6
     ${BLAKE3_LIBRARIES}
 )
 
-target_include_directories(pcmanfm-qt-fs-tests PRIVATE
-    ${CMAKE_SOURCE_DIR}/pcmanfm
+set(PCMANFM_SETTINGS_INCLUDES
     ${BLAKE3_INCLUDE_DIRS}
 )
 
-add_test(NAME pcmanfm-qt-fs-tests COMMAND pcmanfm-qt-fs-tests)
-set_tests_properties(pcmanfm-qt-fs-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+pcmanfm_add_test(pcmanfm-qt-utils-tests
+    SOURCES
+        test_utils.cpp
+        ${PCMANFM_SETTINGS_SOURCES}
+    LIBS
+        ${PCMANFM_SETTINGS_LIBS}
+    INCLUDES
+        ${PCMANFM_SETTINGS_INCLUDES}
+)
 
-# Qt adapter (QtFileOps) tests
-add_executable(pcmanfm-qt-ops-tests
-    qt_fileops_test.cpp
-    ../src/backends/qt/qt_fileops.cpp
-    ../src/core/ifileops.cpp
+pcmanfm_add_test(pcmanfm-qt-settings-tests
+    SOURCES
+        test_settings.cpp
+        ${PCMANFM_SETTINGS_SOURCES}
+    LIBS
+        ${PCMANFM_SETTINGS_LIBS}
+    INCLUDES
+        ${PCMANFM_SETTINGS_INCLUDES}
+)
+
+pcmanfm_add_test(pcmanfm-qt-settings-functionality-tests
+    SOURCES
+        test_settings_functionality.cpp
+        ${PCMANFM_SETTINGS_SOURCES}
+    LIBS
+        ${PCMANFM_SETTINGS_LIBS}
+    INCLUDES
+        ${PCMANFM_SETTINGS_INCLUDES}
+)
+
+set(PCMANFM_XDGDIR_SOURCES
+    ../pcmanfm/xdgdir.cpp
+    ../src/ui/fsqt.cpp
     ../src/core/fs_ops.cpp
 )
 
-target_link_libraries(pcmanfm-qt-ops-tests
-    Qt6::Test
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-    ${BLAKE3_LIBRARIES}
+pcmanfm_add_test(pcmanfm-qt-xdgdir-tests
+    SOURCES
+        test_xdgdir.cpp
+        ${PCMANFM_XDGDIR_SOURCES}
+    LIBS
+        ${BLAKE3_LIBRARIES}
+    INCLUDES
+        ${BLAKE3_INCLUDE_DIRS}
 )
 
-target_include_directories(pcmanfm-qt-ops-tests PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/pcmanfm
-    ${BLAKE3_INCLUDE_DIRS}
+pcmanfm_add_test(pcmanfm-qt-xdgdir-functionality-tests
+    SOURCES
+        test_xdgdir_functionality.cpp
+        ${PCMANFM_XDGDIR_SOURCES}
+    LIBS
+        ${BLAKE3_LIBRARIES}
+    INCLUDES
+        ${BLAKE3_INCLUDE_DIRS}
 )
-
-add_test(NAME pcmanfm-qt-ops-tests COMMAND pcmanfm-qt-ops-tests)
-set_tests_properties(pcmanfm-qt-ops-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
-
-# Archive extraction tests
-add_executable(pcmanfm-qt-archive-tests
-    archive_extract_test.cpp
-    ../src/core/archive_extract.cpp
-    ../src/core/fs_ops.cpp
-)
-
-target_link_libraries(pcmanfm-qt-archive-tests
-    Qt6::Test
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-    ${LIBARCHIVE_LIBRARIES}
-    ${BLAKE3_LIBRARIES}
-)
-
-target_include_directories(pcmanfm-qt-archive-tests PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/pcmanfm
-    ${LIBARCHIVE_INCLUDE_DIRS}
-    ${BLAKE3_INCLUDE_DIRS}
-)
-
-add_test(NAME pcmanfm-qt-archive-tests COMMAND pcmanfm-qt-archive-tests)
-set_tests_properties(pcmanfm-qt-archive-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
-
-# Windowed file reader tests
-add_executable(pcmanfm-qt-windowed-reader-tests
-    windowed_file_reader_test.cpp
-    ../src/core/windowed_file_reader.cpp
-)
-
-target_link_libraries(pcmanfm-qt-windowed-reader-tests
-    Qt6::Test
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-)
-
-target_include_directories(pcmanfm-qt-windowed-reader-tests PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-)
-
-add_test(NAME pcmanfm-qt-windowed-reader-tests COMMAND pcmanfm-qt-windowed-reader-tests)
-set_tests_properties(pcmanfm-qt-windowed-reader-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
-
-# Disassembly engine tests
-add_executable(pcmanfm-qt-disasm-tests
-    disasm_engine_test.cpp
-    ../src/ui/disasm_engine.cpp
-)
-
-target_link_libraries(pcmanfm-qt-disasm-tests
-    Qt6::Test
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-    ${CAPSTONE_LIBRARIES}
-)
-
-target_include_directories(pcmanfm-qt-disasm-tests PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-    ${CAPSTONE_INCLUDE_DIRS}
-)
-
-add_test(NAME pcmanfm-qt-disasm-tests COMMAND pcmanfm-qt-disasm-tests)
-set_tests_properties(pcmanfm-qt-disasm-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

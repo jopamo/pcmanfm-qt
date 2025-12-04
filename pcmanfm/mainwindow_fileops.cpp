@@ -15,7 +15,7 @@
 #include "../src/core/fs_ops.h"
 
 // LibFM-Qt headers
-#include <libfm-qt6/utilities.h>
+#include "panel/panel.h"
 
 // Qt headers
 #include <QAbstractItemView>
@@ -45,7 +45,7 @@ bool shouldPreserveOwnershipForOps() {
     return appSettings().preservePermissions();
 }
 
-QStringList filePathListToStringList(const Fm::FilePathList& paths) {
+QStringList filePathListToStringList(const Panel::FilePathList& paths) {
     QStringList result;
     result.reserve(static_cast<int>(paths.size()));
     for (const auto& path : paths) {
@@ -54,14 +54,14 @@ QStringList filePathListToStringList(const Fm::FilePathList& paths) {
     return result;
 }
 
-std::shared_ptr<IFileInfo> convertToIFileInfo(const std::shared_ptr<const Fm::FileInfo>& fmInfo) {
+std::shared_ptr<IFileInfo> convertToIFileInfo(const std::shared_ptr<const Panel::FileInfo>& fmInfo) {
     if (!fmInfo) {
         return {};
     }
     return std::make_shared<QtFileInfo>(QString::fromUtf8(fmInfo->path().toString().get()));
 }
 
-bool renameFileWithBackend(const std::shared_ptr<const Fm::FileInfo>& file, QWidget* parent) {
+bool renameFileWithBackend(const std::shared_ptr<const Panel::FileInfo>& file, QWidget* parent) {
     if (!file) {
         return false;
     }
@@ -351,7 +351,7 @@ void MainWindow::on_actionCleanPerFolderConfig_triggered() {
     }
 }
 
-void MainWindow::openFolderAndSelectFiles(const Fm::FilePathList& files, bool inNewTab) {
+void MainWindow::openFolderAndSelectFiles(const Panel::FilePathList& files, bool inNewTab) {
     if (files.empty()) {
         return;
     }

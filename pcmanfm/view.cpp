@@ -41,10 +41,8 @@
 #include <algorithm>
 #include <limits>
 
-// LibFM-Qt Headers
-#include <libfm-qt6/filemenu.h>
-#include <libfm-qt6/foldermenu.h>
-#include <libfm-qt6/proxyfoldermodel.h>  // Ensure this is included for ProxyFolderModel usage
+// Panel (libfm-qt fork) Headers
+#include "panel/panel.h"
 
 // Local Headers
 #include "application.h"
@@ -174,7 +172,7 @@ QModelIndexList indexesInRect(QAbstractItemView* view, const QRect& rect) {
 
 }  // namespace
 
-void View::removeLibfmArchiverActions(Fm::FileMenu* menu) {
+void View::removeLibfmArchiverActions(Panel::FileMenu* menu) {
     if (!menu) {
         return;
     }
@@ -189,7 +187,7 @@ void View::removeLibfmArchiverActions(Fm::FileMenu* menu) {
     }
 }
 
-View::View(Fm::FolderView::ViewMode mode, QWidget* parent) : Fm::FolderView(mode, parent) {
+View::View(Panel::FolderView::ViewMode mode, QWidget* parent) : Panel::FolderView(mode, parent) {
     thumbnailPrefetchTimer_.setParent(this);
     thumbnailPrefetchTimer_.setSingleShot(true);
     thumbnailPrefetchTimer_.setInterval(40);
@@ -201,17 +199,17 @@ View::View(Fm::FolderView::ViewMode mode, QWidget* parent) : Fm::FolderView(mode
 
 View::~View() = default;
 
-void View::setModel(Fm::ProxyFolderModel* _model) {
-    Fm::FolderView::setModel(_model);
+void View::setModel(Panel::ProxyFolderModel* _model) {
+    Panel::FolderView::setModel(_model);
     setupThumbnailHooks();
     scheduleThumbnailPrefetch();
 }
 
-void View::onFileClicked(int type, const std::shared_ptr<const Fm::FileInfo>& fileInfo) {
+void View::onFileClicked(int type, const std::shared_ptr<const Panel::FileInfo>& fileInfo) {
     if (type == MiddleClick) {
         if (fileInfo && fileInfo->isDir()) {
             // fileInfo->path() should not be used directly here for virtual locations
-            Fm::FileInfoList files;
+            Panel::FileInfoList files;
             files.emplace_back(fileInfo);
             launchFiles(std::move(files), true);
         }
@@ -259,11 +257,11 @@ void View::onFileClicked(int type, const std::shared_ptr<const Fm::FileInfo>& fi
     }
 
     // Delegate other click types to base class
-    Fm::FolderView::onFileClicked(type, fileInfo);
+    Panel::FolderView::onFileClicked(type, fileInfo);
 }
 
 void View::onNewWindow() {
-    auto* menu = qobject_cast<Fm::FileMenu*>(sender()->parent());
+    auto* menu = qobject_cast<Panel::FileMenu*>(sender()->parent());
     if (!menu)
         return;
 
@@ -278,7 +276,7 @@ void View::onNewWindow() {
 }
 
 void View::onNewTab() {
-    auto* menu = qobject_cast<Fm::FileMenu*>(sender()->parent());
+    auto* menu = qobject_cast<Panel::FileMenu*>(sender()->parent());
     if (!menu)
         return;
 
@@ -294,7 +292,7 @@ void View::onNewTab() {
 
 void View::onOpenInTerminal() {
     auto* app = static_cast<Application*>(qApp);
-    auto* menu = qobject_cast<Fm::FileMenu*>(sender()->parent());
+    auto* menu = qobject_cast<Panel::FileMenu*>(sender()->parent());
     if (!menu)
         return;
 
@@ -305,7 +303,7 @@ void View::onOpenInTerminal() {
 }
 
 void View::onOpenInHexEditor() {
-    auto* menu = qobject_cast<Fm::FileMenu*>(sender()->parent());
+    auto* menu = qobject_cast<Panel::FileMenu*>(sender()->parent());
     if (!menu) {
         return;
     }
@@ -348,7 +346,7 @@ void View::onOpenInHexEditor() {
 }
 
 void View::onDisassembleWithCapstone() {
-    auto* menu = qobject_cast<Fm::FileMenu*>(sender()->parent());
+    auto* menu = qobject_cast<Panel::FileMenu*>(sender()->parent());
     if (!menu) {
         return;
     }
@@ -392,7 +390,7 @@ void View::onDisassembleWithCapstone() {
 }
 
 void View::onCalculateBlake3() {
-    auto* menu = qobject_cast<Fm::FileMenu*>(sender()->parent());
+    auto* menu = qobject_cast<Panel::FileMenu*>(sender()->parent());
     if (!menu) {
         return;
     }
@@ -480,7 +478,7 @@ void View::onCalculateBlake3() {
             QPlainTextEdit* checksumEdit = widgets.checksumEdit;
             QPlainTextEdit* errorEdit = widgets.errorEdit;
             QGroupBox* errorBox = widgets.errorBox;
-            connect(copyButton, &QPushButton::clicked, dialog, [this, dialogPtr, checksumEdit, errorEdit, errorBox] {
+            connect(copyButton, &QPushButton::clicked, dialog, [dialogPtr, checksumEdit, errorEdit, errorBox] {
                 if (!dialogPtr) {
                     return;
                 }
@@ -649,7 +647,7 @@ void View::startArchiveExtraction(const QString& archivePath, const QString& des
     dialog->show();
 }
 
-void View::prepareFileMenu(Fm::FileMenu* menu) {
+void View::prepareFileMenu(Panel::FileMenu* menu) {
     Settings& settings = appSettings();
     menu->setConfirmDelete(settings.confirmDelete());
     menu->setConfirmTrash(settings.confirmTrash());
@@ -927,7 +925,7 @@ void View::prepareFileMenu(Fm::FileMenu* menu) {
     }
 }
 
-void View::prepareFolderMenu(Fm::FolderMenu* menu) {
+void View::prepareFolderMenu(Panel::FolderMenu* menu) {
     auto folder = folderInfo();
     if (folder && folder->isNative()) {
         auto* action =
@@ -979,7 +977,7 @@ bool View::eventFilter(QObject* obj, QEvent* event) {
         scheduleThumbnailPrefetch();
     }
 
-    return Fm::FolderView::eventFilter(obj, event);
+    return Panel::FolderView::eventFilter(obj, event);
 }
 
 void View::requestVisibleThumbnails() {
@@ -1004,10 +1002,10 @@ void View::requestVisibleThumbnails() {
 }
 
 void View::updateFromSettings(Settings& settings) {
-    setIconSize(Fm::FolderView::IconMode, QSize(settings.bigIconSize(), settings.bigIconSize()));
-    setIconSize(Fm::FolderView::CompactMode, QSize(settings.smallIconSize(), settings.smallIconSize()));
-    setIconSize(Fm::FolderView::ThumbnailMode, QSize(settings.thumbnailIconSize(), settings.thumbnailIconSize()));
-    setIconSize(Fm::FolderView::DetailedListMode, QSize(settings.smallIconSize(), settings.smallIconSize()));
+    setIconSize(Panel::FolderView::IconMode, QSize(settings.bigIconSize(), settings.bigIconSize()));
+    setIconSize(Panel::FolderView::CompactMode, QSize(settings.smallIconSize(), settings.smallIconSize()));
+    setIconSize(Panel::FolderView::ThumbnailMode, QSize(settings.thumbnailIconSize(), settings.thumbnailIconSize()));
+    setIconSize(Panel::FolderView::DetailedListMode, QSize(settings.smallIconSize(), settings.smallIconSize()));
 
     setMargins(settings.folderViewCellMargins());
 
@@ -1017,7 +1015,7 @@ void View::updateFromSettings(Settings& settings) {
 
     // Cast the model to ProxyFolderModel to access extended settings
     // Using dynamic_cast for safety, though we expect ProxyFolderModel here based on TabPage setup
-    if (auto* proxyModel = dynamic_cast<Fm::ProxyFolderModel*>(model())) {
+    if (auto* proxyModel = dynamic_cast<Panel::ProxyFolderModel*>(model())) {
         proxyModel->setShowThumbnails(settings.showThumbnails());
         proxyModel->setBackupAsHidden(settings.backupAsHidden());
         if (auto* magickProxy = dynamic_cast<ImageMagickProxyFolderModel*>(proxyModel)) {
@@ -1027,7 +1025,7 @@ void View::updateFromSettings(Settings& settings) {
     scheduleThumbnailPrefetch();
 }
 
-void View::launchFiles(Fm::FileInfoList files, bool inNewTabs) {
+void View::launchFiles(Panel::FileInfoList files, bool inNewTabs) {
     if (!fileLauncher()) {
         return;
     }
@@ -1072,9 +1070,9 @@ void View::launchFiles(Fm::FileInfoList files, bool inNewTabs) {
     fileLauncher()->launchFiles(nullptr, std::move(files));
 }
 
-void View::openFolderAndSelectFile(const std::shared_ptr<const Fm::FileInfo>& fileInfo, bool inNewTab) {
+void View::openFolderAndSelectFile(const std::shared_ptr<const Panel::FileInfo>& fileInfo, bool inNewTab) {
     if (auto* win = qobject_cast<MainWindow*>(window())) {
-        Fm::FilePathList paths;
+        Panel::FilePathList paths;
         paths.emplace_back(fileInfo->path());
         win->openFolderAndSelectFiles(std::move(paths), inNewTab);
     }

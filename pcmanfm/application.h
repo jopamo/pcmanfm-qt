@@ -20,10 +20,7 @@
 #ifndef PCMANFM_APPLICATION_H
 #define PCMANFM_APPLICATION_H
 
-#include <libfm-qt6/core/fileinfo.h>
-#include <libfm-qt6/core/filepath.h>
-#include <libfm-qt6/editbookmarksdialog.h>
-#include <libfm-qt6/libfmqt.h>
+#include "panel/panel.h"
 
 #include <QApplication>
 #include <QPointer>
@@ -63,7 +60,7 @@ class Application : public QApplication {
 
     Settings& settings() { return settings_; }
 
-    Fm::LibFmQt& libFm() { return libFm_; }
+    Panel::LibFmQt& libFm() { return libFm_; }
 
     bool openingLastTabs() const { return openingLastTabs_; }
 
@@ -79,8 +76,8 @@ class Application : public QApplication {
 
     void updateFromSettings();
 
-    void openFolderInTerminal(Fm::FilePath path);
-    void openFolders(Fm::FileInfoList files);
+    void openFolderInTerminal(Panel::FilePath path);
+    void openFolders(Panel::FileInfoList files);
 
     QString profileName() { return profileName_; }
 
@@ -108,12 +105,12 @@ class Application : public QApplication {
     void installSigtermHandler();
 
     bool isPrimaryInstance;
-    Fm::LibFmQt libFm_;
+    Panel::LibFmQt libFm_;
     Settings settings_;
     QString profileName_;
     bool daemonMode_;
     QPointer<PreferencesDialog> preferencesDialog_;
-    QPointer<Fm::EditBookmarksDialog> editBookmarksialog_;
+    QPointer<Panel::EditBookmarksDialog> editBookmarksialog_;
     QTranslator translator;
     QTranslator qtTranslator;
 

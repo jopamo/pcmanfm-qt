@@ -28,8 +28,6 @@ set(LIBFM_QT_SOVERSION "17")
 
 set(GLIB_MINIMUM_VERSION "2.50.0")
 set(LIBMENUCACHE_MINIMUM_VERSION "1.1.0")
-set(LXQTMENUDATA_MINIMUM_VERSION "2.3.0")
-set(LXQTBT_MINIMUM_VERSION "2.3.0")
 set(QT_MINIMUM_VERSION "6.6.0")
 
 find_package(Qt6Widgets "${QT_MINIMUM_VERSION}" REQUIRED)
@@ -39,11 +37,13 @@ if (Qt6Gui_VERSION VERSION_GREATER_EQUAL "6.10.0")
     find_package(Qt6GuiPrivate REQUIRED)
 endif()
 
-find_package(lxqt2-build-tools "${LXQTBT_MINIMUM_VERSION}" REQUIRED)
-find_package(GLIB "${GLIB_MINIMUM_VERSION}" REQUIRED COMPONENTS gio gio-unix gobject gthread)
-find_package(MenuCache "${LIBMENUCACHE_MINIMUM_VERSION}" REQUIRED)
-find_package(lxqt-menu-data "${LXQTMENUDATA_MINIMUM_VERSION}" REQUIRED)
-find_package(Exif REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GLIB REQUIRED glib-2.0>=${GLIB_MINIMUM_VERSION})
+pkg_check_modules(GLIB_GIO REQUIRED gio-2.0>=${GLIB_MINIMUM_VERSION})
+pkg_check_modules(GLIB_GIO_UNIX REQUIRED gio-unix-2.0>=${GLIB_MINIMUM_VERSION})
+pkg_check_modules(GLIB_GOBJECT REQUIRED gobject-2.0>=${GLIB_MINIMUM_VERSION})
+pkg_check_modules(GLIB_GTHREAD REQUIRED gthread-2.0>=${GLIB_MINIMUM_VERSION})
+pkg_check_modules(EXIF REQUIRED libexif>=0.6.0)
 find_package(XCB REQUIRED)
 
 message(STATUS "Building ${PROJECT_NAME} with Qt ${Qt6Core_VERSION}")
@@ -52,14 +52,11 @@ option(UPDATE_TRANSLATIONS "Update source translation translations/*.ts files" O
 include(GNUInstallDirs)
 include(GenerateExportHeader)
 include(CMakePackageConfigHelpers)
-include(LXQtPreventInSourceBuilds)
-include(LXQtTranslateTs)
-include(LXQtTranslateDesktop)
-include(LXQtCompilerSettings NO_POLICY_SCOPE)
 
 set(CMAKE_AUTOMOC TRUE)
 set(CMAKE_AUTOUIC ON)
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_INCLUDE_CURRENT_DIR OFF)
+set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE OFF)
 
 write_basic_package_version_file(
     "${CMAKE_BINARY_DIR}/${LIBFM_QT_LIBRARY_NAME}-config-version.cmake"

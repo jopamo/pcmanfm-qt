@@ -32,9 +32,7 @@
 #include "../src/ui/fsqt.h"
 
 // LibFM-Qt Headers
-#include <libfm-qt6/browsehistory.h>
-#include <libfm-qt6/core/folder.h>  // <--- Added for Fm::Folder
-#include <libfm-qt6/utilities.h>
+#include "panel/panel.h"
 
 namespace PCManFM {
 
@@ -48,7 +46,7 @@ Settings& appSettings() {
 
 }  // namespace
 
-MainWindow::MainWindow(Fm::FilePath path)
+MainWindow::MainWindow(Panel::FilePath path)
     : pathEntry_(nullptr),
       pathBar_(nullptr),
       fsInfoLabel_(nullptr),
@@ -103,17 +101,17 @@ MainWindow::MainWindow(Fm::FilePath path)
         ui.sidePane->setMode(settings.sidePaneMode());
         ui.sidePane->restoreHiddenPlaces(settings.getHiddenPlaces());
 
-        connect(ui.sidePane, &Fm::SidePane::chdirRequested, this, &MainWindow::onSidePaneChdirRequested);
-        connect(ui.sidePane, &Fm::SidePane::openFolderInNewWindowRequested, this,
+        connect(ui.sidePane, &Panel::SidePane::chdirRequested, this, &MainWindow::onSidePaneChdirRequested);
+        connect(ui.sidePane, &Panel::SidePane::openFolderInNewWindowRequested, this,
                 &MainWindow::onSidePaneOpenFolderInNewWindowRequested);
-        connect(ui.sidePane, &Fm::SidePane::openFolderInNewTabRequested, this,
+        connect(ui.sidePane, &Panel::SidePane::openFolderInNewTabRequested, this,
                 &MainWindow::onSidePaneOpenFolderInNewTabRequested);
-        connect(ui.sidePane, &Fm::SidePane::openFolderInTerminalRequested, this,
+        connect(ui.sidePane, &Panel::SidePane::openFolderInTerminalRequested, this,
                 &MainWindow::onSidePaneOpenFolderInTerminalRequested);
-        connect(ui.sidePane, &Fm::SidePane::createNewFolderRequested, this,
+        connect(ui.sidePane, &Panel::SidePane::createNewFolderRequested, this,
                 &MainWindow::onSidePaneCreateNewFolderRequested);
-        connect(ui.sidePane, &Fm::SidePane::modeChanged, this, &MainWindow::onSidePaneModeChanged);
-        connect(ui.sidePane, &Fm::SidePane::hiddenPlaceSet, this, &MainWindow::onSettingHiddenPlace);
+        connect(ui.sidePane, &Panel::SidePane::modeChanged, this, &MainWindow::onSidePaneModeChanged);
+        connect(ui.sidePane, &Panel::SidePane::hiddenPlaceSet, this, &MainWindow::onSettingHiddenPlace);
     }
 
     // Initialize splitter
@@ -187,24 +185,24 @@ MainWindow::~MainWindow() {
 //-----------------------------------------------------------------------------
 
 void MainWindow::on_actionNewTab_triggered() {
-    Fm::FilePath path;
+    Panel::FilePath path;
     if (TabPage* page = currentPage()) {
         path = page->path();
     }
     else {
-        path = Fm::FilePath::homeDir();
+        path = Panel::FilePath::homeDir();
     }
 
     addTab(path);
 }
 
 void MainWindow::on_actionNewWin_triggered() {
-    Fm::FilePath path;
+    Panel::FilePath path;
     if (TabPage* page = currentPage()) {
         path = page->path();
     }
     else {
-        path = Fm::FilePath::homeDir();
+        path = Panel::FilePath::homeDir();
     }
 
     auto* win = new MainWindow(path);
@@ -261,7 +259,7 @@ void MainWindow::on_actionNewBlankFile_triggered() {
             return;
         }
 
-        // Convert Fm::FilePath to a local filesystem path string
+        // Convert Panel::FilePath to a local filesystem path string
         // localPath() returns a CStrPtr, get() gives the const char*
         QString dirPath = QString::fromUtf8(page->path().localPath().get());
         QDir dir(dirPath);
@@ -287,7 +285,7 @@ void MainWindow::on_actionCreateLauncher_triggered() {
                 return;
             }
 
-            // Correctly convert Fm::FilePath to a local file path string
+            // Correctly convert Panel::FilePath to a local file path string
             QString currentDirPath = QString::fromUtf8(page->path().localPath().get());
             QString filePath = currentDirPath + QStringLiteral("/") + name + QStringLiteral(".desktop");
             QString error;
@@ -352,12 +350,12 @@ void MainWindow::on_actionSplitView_triggered(bool check) {
 
     if (splitView_) {
         // Enable Split: Add a second ViewFrame
-        Fm::FilePath path;
+        Panel::FilePath path;
         if (TabPage* page = currentPage()) {
             path = page->path();
         }
         else {
-            path = Fm::FilePath::homeDir();
+            path = Panel::FilePath::homeDir();
         }
 
         addViewFrame(path);
@@ -525,7 +523,7 @@ void MainWindow::onShortcutJumpToTab() {
     // Logic for Alt+1, Alt+2 etc
 }
 
-void MainWindow::onSidePaneChdirRequested(int type, const Fm::FilePath& path) {
+void MainWindow::onSidePaneChdirRequested(int type, const Panel::FilePath& path) {
     if (type == 0) {  // left button
         chdir(path);
     }
@@ -537,24 +535,24 @@ void MainWindow::onSidePaneChdirRequested(int type, const Fm::FilePath& path) {
     }
 }
 
-void MainWindow::onSidePaneOpenFolderInNewWindowRequested(const Fm::FilePath& path) {
+void MainWindow::onSidePaneOpenFolderInNewWindowRequested(const Panel::FilePath& path) {
     (new MainWindow(path))->show();
 }
 
-void MainWindow::onSidePaneOpenFolderInNewTabRequested(const Fm::FilePath& path) {
+void MainWindow::onSidePaneOpenFolderInNewTabRequested(const Panel::FilePath& path) {
     addTab(path);
 }
 
-void MainWindow::onSidePaneOpenFolderInTerminalRequested(const Fm::FilePath& path) {
+void MainWindow::onSidePaneOpenFolderInTerminalRequested(const Panel::FilePath& path) {
     static_cast<Application*>(qApp)->openFolderInTerminal(path);
 }
 
-void MainWindow::onSidePaneCreateNewFolderRequested(const Fm::FilePath& path) {
+void MainWindow::onSidePaneCreateNewFolderRequested(const Panel::FilePath& path) {
     chdir(path);
     QTimer::singleShot(100, this, &MainWindow::on_actionNewFolder_triggered);
 }
 
-void MainWindow::onSidePaneModeChanged(Fm::SidePane::Mode mode) {
+void MainWindow::onSidePaneModeChanged(Panel::SidePane::Mode mode) {
     appSettings().setSidePaneMode(mode);
 }
 

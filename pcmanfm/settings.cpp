@@ -19,9 +19,7 @@
 
 #include "settings.h"
 
-#include <libfm-qt6/core/folderconfig.h>
-#include <libfm-qt6/core/terminal.h>
-#include <libfm-qt6/utilities.h>
+#include "panel/panel.h"
 
 #include <QApplication>
 #include <QDir>
@@ -35,17 +33,13 @@ namespace PCManFM {
 inline static const char* bookmarkOpenMethodToString(OpenDirTargetType value);
 inline static OpenDirTargetType bookmarkOpenMethodFromString(const QString str);
 
-inline static const char* viewModeToString(Fm::FolderView::ViewMode value);
-inline static Fm::FolderView::ViewMode viewModeFromString(const QString str);
+inline static Panel::FolderView::ViewMode viewModeFromString(const QString str);
 
-inline static const char* sidePaneModeToString(Fm::SidePane::Mode value);
-inline static Fm::SidePane::Mode sidePaneModeFromString(const QString& str);
+inline static Panel::SidePane::Mode sidePaneModeFromString(const QString& str);
 
-inline static const char* sortOrderToString(Qt::SortOrder order);
 inline static Qt::SortOrder sortOrderFromString(const QString str);
 
-inline static const char* sortColumnToString(Fm::FolderModel::ColumnId value);
-inline static Fm::FolderModel::ColumnId sortColumnFromString(const QString str);
+inline static Panel::FolderModel::ColumnId sortColumnFromString(const QString str);
 
 Settings::Settings()
     : QObject(),
@@ -69,13 +63,13 @@ Settings::Settings()
       lastWindowMaximized_(false),
       splitterPos_(120),
       sidePaneVisible_(true),
-      sidePaneMode_(Fm::SidePane::ModePlaces),
+      sidePaneMode_(Panel::SidePane::ModePlaces),
       showMenuBar_(true),
       splitView_(false),
-      viewMode_(Fm::FolderView::IconMode),
+      viewMode_(Panel::FolderView::IconMode),
       showHidden_(false),
       sortOrder_(Qt::AscendingOrder),
-      sortColumn_(Fm::FolderModel::ColumnFileName),
+      sortColumn_(Panel::FolderModel::ColumnFileName),
       sortFolderFirst_(true),
       sortHiddenLast_(false),
       sortCaseSensitive_(false),
@@ -216,7 +210,7 @@ bool Settings::loadFile(QString filePath) {
     settings.endGroup();
 
     settings.beginGroup(QStringLiteral("FolderView"));
-    viewMode_ = viewModeFromString(settings.value(QStringLiteral("Mode"), Fm::FolderView::IconMode).toString());
+    viewMode_ = viewModeFromString(settings.value(QStringLiteral("Mode"), Panel::FolderView::IconMode).toString());
     showHidden_ = settings.value(QStringLiteral("ShowHidden"), false).toBool();
     sortOrder_ = sortOrderFromString(settings.value(QStringLiteral("SortOrder")).toString());
     sortColumn_ = sortColumnFromString(settings.value(QStringLiteral("SortColumn")).toString());
@@ -394,7 +388,7 @@ bool Settings::saveFile(QString filePath) {
     settings.endGroup();
 
     // save per-folder settings
-    Fm::FolderConfig::saveCache();
+    Panel::FolderConfig::saveCache();
 
     settings.beginGroup(QStringLiteral("Search"));
     settings.setValue(QStringLiteral("searchNameCaseInsensitive"), searchNameCaseInsensitive_);
@@ -476,20 +470,20 @@ const QList<int>& Settings::iconSizes(IconType type) {
 }
 
 // String conversion member functions
-const char* Settings::viewModeToString(Fm::FolderView::ViewMode value) {
+const char* Settings::viewModeToString(Panel::FolderView::ViewMode value) {
     const char* ret;
     switch (value) {
-        case Fm::FolderView::IconMode:
+        case Panel::FolderView::IconMode:
         default:
             ret = "icon";
             break;
-        case Fm::FolderView::CompactMode:
+        case Panel::FolderView::CompactMode:
             ret = "compact";
             break;
-        case Fm::FolderView::DetailedListMode:
+        case Panel::FolderView::DetailedListMode:
             ret = "detailed";
             break;
-        case Fm::FolderView::ThumbnailMode:
+        case Panel::FolderView::ThumbnailMode:
             ret = "thumbnail";
             break;
     }
@@ -500,49 +494,49 @@ const char* Settings::sortOrderToString(Qt::SortOrder order) {
     return (order == Qt::DescendingOrder ? "descending" : "ascending");
 }
 
-const char* Settings::sortColumnToString(Fm::FolderModel::ColumnId value) {
+const char* Settings::sortColumnToString(Panel::FolderModel::ColumnId value) {
     const char* ret;
     switch (value) {
-        case Fm::FolderModel::ColumnFileName:
+        case Panel::FolderModel::ColumnFileName:
         default:
             ret = "name";
             break;
-        case Fm::FolderModel::ColumnFileType:
+        case Panel::FolderModel::ColumnFileType:
             ret = "type";
             break;
-        case Fm::FolderModel::ColumnFileSize:
+        case Panel::FolderModel::ColumnFileSize:
             ret = "size";
             break;
-        case Fm::FolderModel::ColumnFileMTime:
+        case Panel::FolderModel::ColumnFileMTime:
             ret = "mtime";
             break;
-        case Fm::FolderModel::ColumnFileCrTime:
+        case Panel::FolderModel::ColumnFileCrTime:
             ret = "crtime";
             break;
-        case Fm::FolderModel::ColumnFileDTime:
+        case Panel::FolderModel::ColumnFileDTime:
             ret = "dtime";
             break;
-        case Fm::FolderModel::ColumnFileOwner:
+        case Panel::FolderModel::ColumnFileOwner:
             ret = "owner";
             break;
-        case Fm::FolderModel::ColumnFileGroup:
+        case Panel::FolderModel::ColumnFileGroup:
             ret = "group";
             break;
     }
     return ret;
 }
 
-const char* Settings::sidePaneModeToString(Fm::SidePane::Mode value) {
+const char* Settings::sidePaneModeToString(Panel::SidePane::Mode value) {
     const char* ret;
     switch (value) {
-        case Fm::SidePane::ModePlaces:
+        case Panel::SidePane::ModePlaces:
         default:
             ret = "places";
             break;
-        case Fm::SidePane::ModeDirTree:
+        case Panel::SidePane::ModeDirTree:
             ret = "dirtree";
             break;
-        case Fm::SidePane::ModeNone:
+        case Panel::SidePane::ModeNone:
             ret = "none";
             break;
     }
@@ -587,164 +581,91 @@ static OpenDirTargetType bookmarkOpenMethodFromString(const QString str) {
     return OpenInCurrentTab;
 }
 
-static const char* viewModeToString(Fm::FolderView::ViewMode value) {
-    const char* ret;
-    switch (value) {
-        case Fm::FolderView::IconMode:
-        default:
-            ret = "icon";
-            break;
-        case Fm::FolderView::CompactMode:
-            ret = "compact";
-            break;
-        case Fm::FolderView::DetailedListMode:
-            ret = "detailed";
-            break;
-        case Fm::FolderView::ThumbnailMode:
-            ret = "thumbnail";
-            break;
-    }
-    return ret;
-}
-
-Fm::FolderView::ViewMode viewModeFromString(const QString str) {
-    Fm::FolderView::ViewMode ret;
+Panel::FolderView::ViewMode viewModeFromString(const QString str) {
+    Panel::FolderView::ViewMode ret;
     if (str == QLatin1String("icon")) {
-        ret = Fm::FolderView::IconMode;
+        ret = Panel::FolderView::IconMode;
     }
     else if (str == QLatin1String("compact")) {
-        ret = Fm::FolderView::CompactMode;
+        ret = Panel::FolderView::CompactMode;
     }
     else if (str == QLatin1String("detailed")) {
-        ret = Fm::FolderView::DetailedListMode;
+        ret = Panel::FolderView::DetailedListMode;
     }
     else if (str == QLatin1String("thumbnail")) {
-        ret = Fm::FolderView::ThumbnailMode;
+        ret = Panel::FolderView::ThumbnailMode;
     }
     else {
-        ret = Fm::FolderView::IconMode;
+        ret = Panel::FolderView::IconMode;
     }
     return ret;
-}
-
-static const char* sortOrderToString(Qt::SortOrder order) {
-    return (order == Qt::DescendingOrder ? "descending" : "ascending");
 }
 
 static Qt::SortOrder sortOrderFromString(const QString str) {
     return (str == QLatin1String("descending") ? Qt::DescendingOrder : Qt::AscendingOrder);
 }
 
-static const char* sortColumnToString(Fm::FolderModel::ColumnId value) {
-    const char* ret;
-    switch (value) {
-        case Fm::FolderModel::ColumnFileName:
-        default:
-            ret = "name";
-            break;
-        case Fm::FolderModel::ColumnFileType:
-            ret = "type";
-            break;
-        case Fm::FolderModel::ColumnFileSize:
-            ret = "size";
-            break;
-        case Fm::FolderModel::ColumnFileMTime:
-            ret = "mtime";
-            break;
-        case Fm::FolderModel::ColumnFileCrTime:
-            ret = "crtime";
-            break;
-        case Fm::FolderModel::ColumnFileDTime:
-            ret = "dtime";
-            break;
-        case Fm::FolderModel::ColumnFileOwner:
-            ret = "owner";
-            break;
-        case Fm::FolderModel::ColumnFileGroup:
-            ret = "group";
-            break;
-    }
-    return ret;
-}
-
-static Fm::FolderModel::ColumnId sortColumnFromString(const QString str) {
-    Fm::FolderModel::ColumnId ret;
+static Panel::FolderModel::ColumnId sortColumnFromString(const QString str) {
+    Panel::FolderModel::ColumnId ret;
     if (str == QLatin1String("name")) {
-        ret = Fm::FolderModel::ColumnFileName;
+        ret = Panel::FolderModel::ColumnFileName;
     }
     else if (str == QLatin1String("type")) {
-        ret = Fm::FolderModel::ColumnFileType;
+        ret = Panel::FolderModel::ColumnFileType;
     }
     else if (str == QLatin1String("size")) {
-        ret = Fm::FolderModel::ColumnFileSize;
+        ret = Panel::FolderModel::ColumnFileSize;
     }
     else if (str == QLatin1String("mtime")) {
-        ret = Fm::FolderModel::ColumnFileMTime;
+        ret = Panel::FolderModel::ColumnFileMTime;
     }
     else if (str == QLatin1String("crtime")) {
-        ret = Fm::FolderModel::ColumnFileCrTime;
+        ret = Panel::FolderModel::ColumnFileCrTime;
     }
     else if (str == QLatin1String("dtime")) {
-        ret = Fm::FolderModel::ColumnFileDTime;
+        ret = Panel::FolderModel::ColumnFileDTime;
     }
     else if (str == QLatin1String("owner")) {
-        ret = Fm::FolderModel::ColumnFileOwner;
+        ret = Panel::FolderModel::ColumnFileOwner;
     }
     else if (str == QLatin1String("group")) {
-        ret = Fm::FolderModel::ColumnFileGroup;
+        ret = Panel::FolderModel::ColumnFileGroup;
     }
     else {
-        ret = Fm::FolderModel::ColumnFileName;
+        ret = Panel::FolderModel::ColumnFileName;
     }
     return ret;
 }
 
-static const char* sidePaneModeToString(Fm::SidePane::Mode value) {
-    const char* ret;
-    switch (value) {
-        case Fm::SidePane::ModePlaces:
-        default:
-            ret = "places";
-            break;
-        case Fm::SidePane::ModeDirTree:
-            ret = "dirtree";
-            break;
-        case Fm::SidePane::ModeNone:
-            ret = "none";
-            break;
-    }
-    return ret;
-}
-
-static Fm::SidePane::Mode sidePaneModeFromString(const QString& str) {
-    Fm::SidePane::Mode ret;
+static Panel::SidePane::Mode sidePaneModeFromString(const QString& str) {
+    Panel::SidePane::Mode ret;
     if (str == QLatin1String("none")) {
-        ret = Fm::SidePane::ModeNone;
+        ret = Panel::SidePane::ModeNone;
     }
     else if (str == QLatin1String("dirtree")) {
-        ret = Fm::SidePane::ModeDirTree;
+        ret = Panel::SidePane::ModeDirTree;
     }
     else {
-        ret = Fm::SidePane::ModePlaces;
+        ret = Panel::SidePane::ModePlaces;
     }
     return ret;
 }
 
 void Settings::setTerminal(QString terminalCommand) {
     terminal_ = terminalCommand;
-    Fm::setDefaultTerminal(terminal_.toStdString());
+    Panel::setDefaultTerminal(terminal_.toStdString());
 }
 
 // per-folder settings
-FolderSettings Settings::loadFolderSettings(const Fm::FilePath& path) const {
+FolderSettings Settings::loadFolderSettings(const Panel::FilePath& path) const {
     FolderSettings settings;
-    Fm::FolderConfig cfg(path);
+    Panel::FolderConfig cfg(path);
     bool customized = !cfg.isEmpty();
-    Fm::FilePath inheritedPath;
+    Panel::FilePath inheritedPath;
     if (!customized && !path.isParentOf(path)) {  // WARNING: menu://applications/ is its own parent
         inheritedPath = path.parent();
         while (inheritedPath.isValid()) {
-            Fm::GErrorPtr err;
+            Panel::GErrorPtr err;
             cfg.close(err);
             cfg.open(inheritedPath);
             if (!cfg.isEmpty()) {
@@ -754,7 +675,7 @@ FolderSettings Settings::loadFolderSettings(const Fm::FilePath& path) const {
                 }
             }
             if (inheritedPath.isParentOf(inheritedPath)) {
-                inheritedPath = Fm::FilePath();  // invalidate it
+                inheritedPath = Panel::FilePath();  // invalidate it
                 break;
             }
             inheritedPath = inheritedPath.parent();
@@ -828,14 +749,14 @@ FolderSettings Settings::loadFolderSettings(const Fm::FilePath& path) const {
     return settings;
 }
 
-void Settings::saveFolderSettings(const Fm::FilePath& path, const FolderSettings& settings) {
+void Settings::saveFolderSettings(const Panel::FilePath& path, const FolderSettings& settings) {
     if (path) {
         // ensure that we have the libfm dir
         QString dirName = xdgUserConfigDir() + QStringLiteral("/libfm");
         QString error;
         FsQt::makeDirParents(dirName, error);  // if libfm config dir does not exist, create it
 
-        Fm::FolderConfig cfg(path);
+        Panel::FolderConfig cfg(path);
         cfg.setString("SortOrder", sortOrderToString(settings.sortOrder()));
         cfg.setString("SortColumn", sortColumnToString(settings.sortColumn()));
         cfg.setString("ViewMode", viewModeToString(settings.viewMode()));
@@ -847,9 +768,9 @@ void Settings::saveFolderSettings(const Fm::FilePath& path, const FolderSettings
     }
 }
 
-void Settings::clearFolderSettings(const Fm::FilePath& path) const {
+void Settings::clearFolderSettings(const Panel::FilePath& path) const {
     if (path) {
-        Fm::FolderConfig cfg(path);
+        Panel::FolderConfig cfg(path);
         cfg.purge();
     }
 }

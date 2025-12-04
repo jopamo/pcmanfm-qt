@@ -22,7 +22,7 @@
 #include "ui_bulk-rename.h"
 #include <QDialog>
 
-#include <libfm-qt6/core/fileinfo.h>
+#include "panel/panel.h"
 
 namespace PCManFM {
 
@@ -70,24 +70,27 @@ class BulkRenameDialog : public QDialog {
 
 class BulkRenamer {
    public:
-    BulkRenamer(const Fm::FileInfoList& files, QWidget* parent = nullptr);
+    BulkRenamer(const Panel::FileInfoList& files, QWidget* parent = nullptr);
     ~BulkRenamer();
 
    private:
-    bool rename(const Fm::FileInfoList& files,
+    bool rename(const Panel::FileInfoList& files,
                 QString& baseName,
                 const QLocale& locale,
                 int start,
                 bool zeroPadding,
                 bool respectLocale,
                 QWidget* parent);
-    bool renameByReplacing(const Fm::FileInfoList& files,
+    bool renameByReplacing(const Panel::FileInfoList& files,
                            const QString& findStr,
                            const QString& replaceStr,
                            Qt::CaseSensitivity cs,
                            bool regex,
                            QWidget* parent);
-    bool renameByChangingCase(const Fm::FileInfoList& files, const QLocale& locale, bool toUpperCase, QWidget* parent);
+    bool renameByChangingCase(const Panel::FileInfoList& files,
+                              const QLocale& locale,
+                              bool toUpperCase,
+                              QWidget* parent);
 };
 
 }  // namespace PCManFM

@@ -16,7 +16,7 @@
 #include "tabpage.h"
 
 // If you are migrating away from libfm, replace these with your new backend interfaces
-#include <libfm-qt6/core/mimetype.h>
+#include "panel/panel.h"
 
 namespace PCManFM {
 
@@ -112,16 +112,16 @@ void MainWindow::updateViewMenuForCurrentPage() {
         QAction* modeAction = nullptr;
 
         switch (tabPage->viewMode()) {
-            case Fm::FolderView::IconMode:
+            case Panel::FolderView::IconMode:
                 modeAction = ui.actionIconView;
                 break;
-            case Fm::FolderView::CompactMode:
+            case Panel::FolderView::CompactMode:
                 modeAction = ui.actionCompactView;
                 break;
-            case Fm::FolderView::DetailedListMode:
+            case Panel::FolderView::DetailedListMode:
                 modeAction = ui.actionDetailedList;
                 break;
-            case Fm::FolderView::ThumbnailMode:
+            case Panel::FolderView::ThumbnailMode:
                 modeAction = ui.actionThumbnailView;
                 break;
         }
@@ -134,17 +134,17 @@ void MainWindow::updateViewMenuForCurrentPage() {
         // WARNING: Since libfm-qt may have a column that is not handled here,
         // we should prevent a crash by checking bounds carefully.
 
-        QAction* sortActions[Fm::FolderModel::NumOfColumns];
+        QAction* sortActions[Panel::FolderModel::NumOfColumns];
         std::fill(std::begin(sortActions), std::end(sortActions), nullptr);
 
-        sortActions[Fm::FolderModel::ColumnFileName] = ui.actionByFileName;
-        sortActions[Fm::FolderModel::ColumnFileMTime] = ui.actionByMTime;
-        sortActions[Fm::FolderModel::ColumnFileCrTime] = ui.actionByCrTime;
-        sortActions[Fm::FolderModel::ColumnFileDTime] = ui.actionByDTime;
-        sortActions[Fm::FolderModel::ColumnFileSize] = ui.actionByFileSize;
-        sortActions[Fm::FolderModel::ColumnFileType] = ui.actionByFileType;
-        sortActions[Fm::FolderModel::ColumnFileOwner] = ui.actionByOwner;
-        sortActions[Fm::FolderModel::ColumnFileGroup] = ui.actionByGroup;
+        sortActions[Panel::FolderModel::ColumnFileName] = ui.actionByFileName;
+        sortActions[Panel::FolderModel::ColumnFileMTime] = ui.actionByMTime;
+        sortActions[Panel::FolderModel::ColumnFileCrTime] = ui.actionByCrTime;
+        sortActions[Panel::FolderModel::ColumnFileDTime] = ui.actionByDTime;
+        sortActions[Panel::FolderModel::ColumnFileSize] = ui.actionByFileSize;
+        sortActions[Panel::FolderModel::ColumnFileType] = ui.actionByFileType;
+        sortActions[Panel::FolderModel::ColumnFileOwner] = ui.actionByOwner;
+        sortActions[Panel::FolderModel::ColumnFileGroup] = ui.actionByGroup;
 
         // Ensure we handle action groups correctly
         if (auto* group = ui.actionByFileName->actionGroup()) {
@@ -154,7 +154,7 @@ void MainWindow::updateViewMenuForCurrentPage() {
             const int sortCol = tabPage->sortColumn();
             QAction* targetAction = nullptr;
 
-            if (sortCol >= 0 && sortCol < Fm::FolderModel::NumOfColumns) {
+            if (sortCol >= 0 && sortCol < Panel::FolderModel::NumOfColumns) {
                 targetAction = sortActions[sortCol];
             }
 
@@ -232,14 +232,14 @@ void MainWindow::updateUIForCurrentPage(bool setFocus) {
 
         // Update Location Bar
         // NOTE: This logic supports both path bar and path entry modes
-        Fm::PathBar* pathBar = nullptr;
-        Fm::PathEdit* pathEdit = nullptr;
+        Panel::PathBar* pathBar = nullptr;
+        Panel::PathEdit* pathEdit = nullptr;
 
         if (splitView_) {
             if (activeViewFrame_) {
-                pathBar = qobject_cast<Fm::PathBar*>(activeViewFrame_->getTopBar());
+                pathBar = qobject_cast<Panel::PathBar*>(activeViewFrame_->getTopBar());
                 if (!pathBar) {
-                    pathEdit = qobject_cast<Fm::PathEdit*>(activeViewFrame_->getTopBar());
+                    pathEdit = qobject_cast<Panel::PathEdit*>(activeViewFrame_->getTopBar());
                 }
             }
         }
@@ -272,12 +272,6 @@ void MainWindow::updateUIForCurrentPage(bool setFocus) {
         ui.actionGoUp->setEnabled(tabPage->canUp());
         ui.actionGoBack->setEnabled(tabPage->canBackward());
         ui.actionGoForward->setEnabled(tabPage->canForward());
-
-        // Safety check for path validity
-        bool isNative = false;
-        if (auto path = tabPage->path()) {
-            isNative = path.isNative();
-        }
 
         updateViewMenuForCurrentPage();
         updateStatusBarForCurrentPage();

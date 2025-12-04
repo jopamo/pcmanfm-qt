@@ -7,10 +7,11 @@
 ### ✅ Completed
 - Core backend interfaces (`IFileInfo`, `IFolderModel`, `IFileOps`, `ITrashBackend`, `IVolumeBackend`, `IRemoteBackend`)
 - Qt backend implementations
-- GIO backend implementations (trash, volume, remote)
+- GIO backends removed; build is Qt/POSIX-only
 - Backend registry system
 - Basic build system integration
 - Modernized "New Folder" creation in MainWindow (Qt-based for local paths)
+- libfm-qt dependency vendored in-tree (Panel namespace) instead of find_package(fm-qt6)
 
 ### ❌ Major Dependencies Remaining
 
@@ -50,7 +51,7 @@
 
 ```cmake
 # Main CMakeLists.txt
-find_package(fm-qt6 REQUIRED)
+add_subdirectory(libfm-qt)  # vendored Panel/libfm-qt build
 
 # pcmanfm/CMakeLists.txt
 target_link_libraries(pcmanfm-qt fm-qt6)

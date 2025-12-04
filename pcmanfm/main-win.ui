@@ -36,7 +36,7 @@
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
-      <widget class="Fm::SidePane" name="sidePane" native="true">
+      <widget class="Panel::SidePane" name="sidePane" native="true">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -963,9 +963,9 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>Fm::SidePane</class>
+   <class>Panel::SidePane</class>
    <extends>QWidget</extends>
-   <header location="global">libfm-qt6/sidepane.h</header>
+   <header location="global">panel/panel.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

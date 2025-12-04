@@ -33,22 +33,22 @@ ViewFrame::ViewFrame(QWidget* parent) : QFrame(parent), topBar_(nullptr) {
 void ViewFrame::createTopBar(bool usePathButtons) {
     if (QVBoxLayout* vBox = qobject_cast<QVBoxLayout*>(layout())) {
         if (usePathButtons) {
-            if (qobject_cast<Fm::PathEdit*>(topBar_)) {
+            if (qobject_cast<Panel::PathEdit*>(topBar_)) {
                 delete topBar_;
                 topBar_ = nullptr;
             }
             if (topBar_ == nullptr) {
-                topBar_ = new Fm::PathBar();
+                topBar_ = new Panel::PathBar();
                 vBox->insertWidget(0, topBar_);
             }
         }
         else {
-            if (qobject_cast<Fm::PathBar*>(topBar_)) {
+            if (qobject_cast<Panel::PathBar*>(topBar_)) {
                 delete topBar_;
                 topBar_ = nullptr;
             }
             if (topBar_ == nullptr) {
-                topBar_ = new Fm::PathEdit();
+                topBar_ = new Panel::PathEdit();
                 vBox->insertWidget(0, topBar_);
             }
         }

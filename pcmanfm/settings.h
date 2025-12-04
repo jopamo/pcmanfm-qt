@@ -20,12 +20,7 @@
 #ifndef PCMANFM_SETTINGS_H
 #define PCMANFM_SETTINGS_H
 
-#include <libfm-qt6/core/archiver.h>
-#include <libfm-qt6/core/legacy/fm-config.h>
-#include <libfm-qt6/core/thumbnailjob.h>
-#include <libfm-qt6/foldermodel.h>
-#include <libfm-qt6/folderview.h>
-#include <libfm-qt6/sidepane.h>
+#include "panel/panel.h"
 
 #include <QObject>
 
@@ -40,8 +35,8 @@ class FolderSettings {
           // NOTE: The default values of the following variables should be
           // the same as those of their corresponding variables in Settings:
           sortOrder_(Qt::AscendingOrder),
-          sortColumn_(Fm::FolderModel::ColumnFileName),
-          viewMode_(Fm::FolderView::IconMode),
+          sortColumn_(Panel::FolderModel::ColumnFileName),
+          viewMode_(Panel::FolderView::IconMode),
           showHidden_(false),
           sortFolderFirst_(true),
           sortHiddenLast_(false),
@@ -56,19 +51,19 @@ class FolderSettings {
 
     void setSortOrder(Qt::SortOrder value) { sortOrder_ = value; }
 
-    Fm::FolderModel::ColumnId sortColumn() const { return sortColumn_; }
+    Panel::FolderModel::ColumnId sortColumn() const { return sortColumn_; }
 
-    void setSortColumn(Fm::FolderModel::ColumnId value) { sortColumn_ = value; }
+    void setSortColumn(Panel::FolderModel::ColumnId value) { sortColumn_ = value; }
 
-    Fm::FolderView::ViewMode viewMode() const { return viewMode_; }
+    Panel::FolderView::ViewMode viewMode() const { return viewMode_; }
 
-    void setViewMode(Fm::FolderView::ViewMode value) { viewMode_ = value; }
+    void setViewMode(Panel::FolderView::ViewMode value) { viewMode_ = value; }
 
     // Conversion functions (implemented in settings.cpp)
-    static Fm::FolderView::ViewMode viewModeFromString(const QString str);
+    static Panel::FolderView::ViewMode viewModeFromString(const QString str);
     static Qt::SortOrder sortOrderFromString(const QString str);
-    static Fm::FolderModel::ColumnId sortColumnFromString(const QString str);
-    static Fm::SidePane::Mode sidePaneModeFromString(const QString& str);
+    static Panel::FolderModel::ColumnId sortColumnFromString(const QString str);
+    static Panel::SidePane::Mode sidePaneModeFromString(const QString& str);
     static OpenDirTargetType bookmarkOpenMethodFromString(const QString str);
 
     bool sortFolderFirst() const { return sortFolderFirst_; }
@@ -91,21 +86,21 @@ class FolderSettings {
 
     void setRecursive(bool value) { recursive_ = value; }
 
-    Fm::FilePath inheritedPath() const { return inheritedPath_; }
+    Panel::FilePath inheritedPath() const { return inheritedPath_; }
 
-    void seInheritedPath(const Fm::FilePath& path) { inheritedPath_ = std::move(path); }
+    void seInheritedPath(const Panel::FilePath& path) { inheritedPath_ = std::move(path); }
 
    private:
     bool isCustomized_;
     Qt::SortOrder sortOrder_;
-    Fm::FolderModel::ColumnId sortColumn_;
-    Fm::FolderView::ViewMode viewMode_;
+    Panel::FolderModel::ColumnId sortColumn_;
+    Panel::FolderView::ViewMode viewMode_;
     bool showHidden_;
     bool sortFolderFirst_;
     bool sortHiddenLast_;
     bool sortCaseSensitive_;
     bool recursive_;
-    Fm::FilePath inheritedPath_;
+    Panel::FilePath inheritedPath_;
     // columns?
 };
 
@@ -125,10 +120,10 @@ class Settings : public QObject {
     static int wallpaperModeFromString(const QString str);
 
     // String conversion utilities
-    static const char* viewModeToString(Fm::FolderView::ViewMode value);
+    static const char* viewModeToString(Panel::FolderView::ViewMode value);
     static const char* sortOrderToString(Qt::SortOrder order);
-    static const char* sortColumnToString(Fm::FolderModel::ColumnId value);
-    static const char* sidePaneModeToString(Fm::SidePane::Mode value);
+    static const char* sortColumnToString(Panel::FolderModel::ColumnId value);
+    static const char* sidePaneModeToString(Panel::SidePane::Mode value);
 
     QString profileDir(QString profile, bool useFallback = false);
 
@@ -161,7 +156,7 @@ class Settings : public QObject {
 
     void setArchiver(QString archiver) {
         archiver_ = archiver;
-        Fm::Archiver::setDefaultArchiverByName(archiver_.toLocal8Bit().constData());
+        Panel::Archiver::setDefaultArchiverByName(archiver_.toLocal8Bit().constData());
     }
 
     bool alwaysShowTabs() const { return alwaysShowTabs_; }
@@ -241,9 +236,9 @@ class Settings : public QObject {
 
     void showSidePane(bool show) { sidePaneVisible_ = show; }
 
-    Fm::SidePane::Mode sidePaneMode() const { return sidePaneMode_; }
+    Panel::SidePane::Mode sidePaneMode() const { return sidePaneMode_; }
 
-    void setSidePaneMode(Fm::SidePane::Mode sidePaneMode) { sidePaneMode_ = sidePaneMode; }
+    void setSidePaneMode(Panel::SidePane::Mode sidePaneMode) { sidePaneMode_ = sidePaneMode; }
 
     bool showMenuBar() const { return showMenuBar_; }
 
@@ -253,9 +248,9 @@ class Settings : public QObject {
 
     void setSplitView(bool split) { splitView_ = split; }
 
-    Fm::FolderView::ViewMode viewMode() const { return viewMode_; }
+    Panel::FolderView::ViewMode viewMode() const { return viewMode_; }
 
-    void setViewMode(Fm::FolderView::ViewMode viewMode) { viewMode_ = viewMode; }
+    void setViewMode(Panel::FolderView::ViewMode viewMode) { viewMode_ = viewMode; }
 
     bool showHidden() const { return showHidden_; }
 
@@ -280,9 +275,9 @@ class Settings : public QObject {
 
     void setSortOrder(Qt::SortOrder sortOrder) { sortOrder_ = sortOrder; }
 
-    Fm::FolderModel::ColumnId sortColumn() const { return sortColumn_; }
+    Panel::FolderModel::ColumnId sortColumn() const { return sortColumn_; }
 
-    void setSortColumn(Fm::FolderModel::ColumnId sortColumn) { sortColumn_ = sortColumn; }
+    void setSortColumn(Panel::FolderModel::ColumnId sortColumn) { sortColumn_ = sortColumn; }
 
     bool sortFolderFirst() const { return sortFolderFirst_; }
 
@@ -379,17 +374,17 @@ class Settings : public QObject {
 
     void setShowThumbnails(bool show) { showThumbnails_ = show; }
 
-    void setThumbnailLocalFilesOnly(bool value) { Fm::ThumbnailJob::setLocalFilesOnly(value); }
+    void setThumbnailLocalFilesOnly(bool value) { Panel::ThumbnailJob::setLocalFilesOnly(value); }
 
-    bool thumbnailLocalFilesOnly() const { return Fm::ThumbnailJob::localFilesOnly(); }
+    bool thumbnailLocalFilesOnly() const { return Panel::ThumbnailJob::localFilesOnly(); }
 
-    int maxThumbnailFileSize() const { return Fm::ThumbnailJob::maxThumbnailFileSize(); }
+    int maxThumbnailFileSize() const { return Panel::ThumbnailJob::maxThumbnailFileSize(); }
 
-    void setMaxThumbnailFileSize(int size) { Fm::ThumbnailJob::setMaxThumbnailFileSize(size); }
+    void setMaxThumbnailFileSize(int size) { Panel::ThumbnailJob::setMaxThumbnailFileSize(size); }
 
-    int maxExternalThumbnailFileSize() const { return Fm::ThumbnailJob::maxExternalThumbnailFileSize(); }
+    int maxExternalThumbnailFileSize() const { return Panel::ThumbnailJob::maxExternalThumbnailFileSize(); }
 
-    void setMaxExternalThumbnailFileSize(int size) { Fm::ThumbnailJob::setMaxExternalThumbnailFileSize(size); }
+    void setMaxExternalThumbnailFileSize(int size) { Panel::ThumbnailJob::setMaxExternalThumbnailFileSize(size); }
 
     void setThumbnailIconSize(int thumbnailIconSize) { thumbnailIconSize_ = thumbnailIconSize; }
 
@@ -447,11 +442,11 @@ class Settings : public QObject {
     }
 
     // per-folder settings
-    FolderSettings loadFolderSettings(const Fm::FilePath& path) const;
+    FolderSettings loadFolderSettings(const Panel::FilePath& path) const;
 
-    void saveFolderSettings(const Fm::FilePath& path, const FolderSettings& settings);
+    void saveFolderSettings(const Panel::FilePath& path, const FolderSettings& settings);
 
-    void clearFolderSettings(const Fm::FilePath& path) const;
+    void clearFolderSettings(const Panel::FilePath& path) const;
 
     bool searchNameCaseInsensitive() const { return searchNameCaseInsensitive_; }
 
@@ -554,14 +549,14 @@ class Settings : public QObject {
     bool lastWindowMaximized_;
     int splitterPos_;
     bool sidePaneVisible_;
-    Fm::SidePane::Mode sidePaneMode_;
+    Panel::SidePane::Mode sidePaneMode_;
     bool showMenuBar_;
     bool splitView_;
 
-    Fm::FolderView::ViewMode viewMode_;
+    Panel::FolderView::ViewMode viewMode_;
     bool showHidden_;
     Qt::SortOrder sortOrder_;
-    Fm::FolderModel::ColumnId sortColumn_;
+    Panel::FolderModel::ColumnId sortColumn_;
     bool sortFolderFirst_;
     bool sortHiddenLast_;
     bool sortCaseSensitive_;

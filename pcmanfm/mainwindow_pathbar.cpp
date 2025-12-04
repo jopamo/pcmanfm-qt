@@ -12,8 +12,7 @@
 #include <QToolBar>  // Ensure toolBar access
 
 // LibFM-Qt Headers
-#include <libfm-qt6/pathbar.h>
-#include <libfm-qt6/pathedit.h>
+#include "panel/panel.h"
 
 namespace PCManFM {
 
@@ -45,16 +44,16 @@ void MainWindow::createSplitViewPathBar(bool usePathButtons) {
             viewFrame->createTopBar(usePathButtons);
             TabPage* curPage = currentPage(viewFrame);
 
-            if (auto* pathBar = qobject_cast<Fm::PathBar*>(viewFrame->getTopBar())) {
-                connect(pathBar, &Fm::PathBar::chdir, this, &MainWindow::onPathBarChdir);
-                connect(pathBar, &Fm::PathBar::middleClickChdir, this, &MainWindow::onPathBarMiddleClickChdir);
-                connect(pathBar, &Fm::PathBar::editingFinished, this, &MainWindow::onResetFocus);
+            if (auto* pathBar = qobject_cast<Panel::PathBar*>(viewFrame->getTopBar())) {
+                connect(pathBar, &Panel::PathBar::chdir, this, &MainWindow::onPathBarChdir);
+                connect(pathBar, &Panel::PathBar::middleClickChdir, this, &MainWindow::onPathBarMiddleClickChdir);
+                connect(pathBar, &Panel::PathBar::editingFinished, this, &MainWindow::onResetFocus);
                 if (curPage) {
                     pathBar->setPath(curPage->path());
                 }
             }
-            else if (auto* pathEntry = qobject_cast<Fm::PathEdit*>(viewFrame->getTopBar())) {
-                connect(pathEntry, &Fm::PathEdit::returnPressed, this, &MainWindow::onPathEntryReturnPressed);
+            else if (auto* pathEntry = qobject_cast<Panel::PathEdit*>(viewFrame->getTopBar())) {
+                connect(pathEntry, &Panel::PathEdit::returnPressed, this, &MainWindow::onPathEntryReturnPressed);
                 if (curPage) {
                     pathEntry->setText(curPage->pathName());
                 }
@@ -73,12 +72,12 @@ void MainWindow::createSingleViewPathBar(bool usePathButtons) {
             pathEntry_ = nullptr;
         }
         if (!pathBar_) {
-            pathBar_ = new Fm::PathBar(this);
+            pathBar_ = new Panel::PathBar(this);
             bar = pathBar_;
 
-            connect(pathBar_, &Fm::PathBar::chdir, this, &MainWindow::onPathBarChdir);
-            connect(pathBar_, &Fm::PathBar::middleClickChdir, this, &MainWindow::onPathBarMiddleClickChdir);
-            connect(pathBar_, &Fm::PathBar::editingFinished, this, &MainWindow::onResetFocus);
+            connect(pathBar_, &Panel::PathBar::chdir, this, &MainWindow::onPathBarChdir);
+            connect(pathBar_, &Panel::PathBar::middleClickChdir, this, &MainWindow::onPathBarMiddleClickChdir);
+            connect(pathBar_, &Panel::PathBar::editingFinished, this, &MainWindow::onResetFocus);
 
             if (curPage) {
                 pathBar_->setPath(curPage->path());
@@ -91,10 +90,10 @@ void MainWindow::createSingleViewPathBar(bool usePathButtons) {
             pathBar_ = nullptr;
         }
         if (!pathEntry_) {
-            pathEntry_ = new Fm::PathEdit(this);
+            pathEntry_ = new Panel::PathEdit(this);
             bar = pathEntry_;
 
-            connect(pathEntry_, &Fm::PathEdit::returnPressed, this, &MainWindow::onPathEntryReturnPressed);
+            connect(pathEntry_, &Panel::PathEdit::returnPressed, this, &MainWindow::onPathEntryReturnPressed);
 
             if (curPage) {
                 pathEntry_->setText(curPage->pathName());
@@ -113,11 +112,11 @@ void MainWindow::createSingleViewPathBar(bool usePathButtons) {
 }
 
 void MainWindow::onPathEntryReturnPressed() {
-    Fm::PathEdit* pathEntry = pathEntry_;
+    Panel::PathEdit* pathEntry = pathEntry_;
 
     // In split view, the sender is the specific path entry
     if (!pathEntry) {
-        pathEntry = qobject_cast<Fm::PathEdit*>(sender());
+        pathEntry = qobject_cast<Panel::PathEdit*>(sender());
     }
 
     if (!pathEntry) {
@@ -126,10 +125,10 @@ void MainWindow::onPathEntryReturnPressed() {
 
     const QString text = pathEntry->text();
     // Using fromPathStr handles local vs URI logic internally in libfm
-    chdir(Fm::FilePath::fromPathStr(text.toLocal8Bit().constData()));
+    chdir(Panel::FilePath::fromPathStr(text.toLocal8Bit().constData()));
 }
 
-void MainWindow::onPathBarChdir(const Fm::FilePath& dirPath) {
+void MainWindow::onPathBarChdir(const Panel::FilePath& dirPath) {
     TabPage* page = nullptr;
     ViewFrame* viewFrame = nullptr;
 
@@ -140,7 +139,7 @@ void MainWindow::onPathBarChdir(const Fm::FilePath& dirPath) {
     }
     else {
         // Split view mode: find which PathBar sent the signal
-        auto* pathBar = qobject_cast<Fm::PathBar*>(sender());
+        auto* pathBar = qobject_cast<Panel::PathBar*>(sender());
         if (pathBar) {
             viewFrame = qobject_cast<ViewFrame*>(pathBar->parentWidget());
             if (viewFrame) {
@@ -154,14 +153,14 @@ void MainWindow::onPathBarChdir(const Fm::FilePath& dirPath) {
     }
 }
 
-void MainWindow::onPathBarMiddleClickChdir(const Fm::FilePath& dirPath) {
+void MainWindow::onPathBarMiddleClickChdir(const Panel::FilePath& dirPath) {
     ViewFrame* viewFrame = nullptr;
 
     if (pathBar_) {
         viewFrame = activeViewFrame_;
     }
     else {
-        auto* pathBar = qobject_cast<Fm::PathBar*>(sender());
+        auto* pathBar = qobject_cast<Panel::PathBar*>(sender());
         if (pathBar) {
             viewFrame = qobject_cast<ViewFrame*>(pathBar->parentWidget());
         }
@@ -212,10 +211,10 @@ void MainWindow::focusPathEntry() {
             return;
         }
 
-        if (auto* pathBar = qobject_cast<Fm::PathBar*>(activeViewFrame_->getTopBar())) {
+        if (auto* pathBar = qobject_cast<Panel::PathBar*>(activeViewFrame_->getTopBar())) {
             pathBar->openEditor();
         }
-        else if (auto* pathEntry = qobject_cast<Fm::PathEdit*>(activeViewFrame_->getTopBar())) {
+        else if (auto* pathEntry = qobject_cast<Panel::PathEdit*>(activeViewFrame_->getTopBar())) {
             pathEntry->setFocus();
             pathEntry->selectAll();
         }

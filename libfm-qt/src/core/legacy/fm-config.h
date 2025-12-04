@@ -192,7 +192,7 @@ struct _FmConfig {
 /* global config object */
 G_MODULE_EXPORT extern FmConfig* fm_config;
 
-void fm_config_init();
+void fm_config_init(void);
 
 G_END_DECLS
 

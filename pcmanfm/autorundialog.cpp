@@ -6,8 +6,7 @@
 #include "autorundialog.h"
 
 // LibFM-Qt Headers
-#include <libfm-qt6/core/filepath.h>
-#include <libfm-qt6/core/iconinfo.h>
+#include "panel/panel.h"
 
 // Qt Headers
 #include <QIcon>
@@ -40,7 +39,7 @@ AutoRunDialog::AutoRunDialog(GVolume* volume, GMount* mount, QWidget* parent, Qt
     if (volume) {
         GIcon* gicon = g_volume_get_icon(volume);
         if (gicon) {
-            QIcon icon = Fm::IconInfo::fromGIcon(gicon)->qicon();
+            QIcon icon = Panel::IconInfo::fromGIcon(gicon)->qicon();
             ui.icon->setPixmap(icon.pixmap(QSize(48, 48)));
             g_object_unref(gicon);
         }
@@ -139,7 +138,7 @@ void AutoRunDialog::openInFileManager(GFile* mountRoot) {
     Settings& settings = appSettings();
 
     // Construct FilePath from GFile, taking ownership (ref/unref logic handled by FilePath)
-    Fm::FilePath path{mountRoot, true};
+    Panel::FilePath path{mountRoot, true};
 
     // open the path in a new main window using the configured initial geometry
     auto* win = new MainWindow(path);
@@ -196,7 +195,7 @@ void AutoRunDialog::onContentTypeFinished(GMount* mount, GAsyncResult* res, Auto
                 GIcon* gicon = g_app_info_get_icon(app);
                 QIcon icon;
                 if (gicon) {
-                    icon = Fm::IconInfo::fromGIcon(gicon)->qicon();
+                    icon = Panel::IconInfo::fromGIcon(gicon)->qicon();
                 }
                 else {
                     icon = QIcon::fromTheme(QStringLiteral("application-x-executable"));

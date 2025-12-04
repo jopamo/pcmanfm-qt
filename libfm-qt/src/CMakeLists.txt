@@ -112,17 +112,9 @@ set(libfm_UIS
 set(LIBFM_QT_DATA_DIR "${CMAKE_INSTALL_FULL_DATADIR}/libfm-qt6")
 set(LIBFM_QT_INTREE_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/include")
 
-# add translation for libfm-qt
-lxqt_translate_ts(QM_FILES
-    UPDATE_TRANSLATIONS ${UPDATE_TRANSLATIONS}
-    SOURCES ${libfm_SRCS} ${libfm_UIS}
-    INSTALL_DIR "${LIBFM_QT_DATA_DIR}/translations"
-)
-
 add_library(${LIBFM_QT_LIBRARY_NAME} SHARED
     ${libfm_SRCS}
     ${libfm_UIS}
-    ${QM_FILES}
 )
 
 install(EXPORT
@@ -134,13 +126,13 @@ install(EXPORT
 target_link_libraries(${LIBFM_QT_LIBRARY_NAME}
     PRIVATE
         Qt6::GuiPrivate
+        menu-cache
     PUBLIC
         Qt6::Widgets
         ${GLIB_LIBRARIES}
         ${GLIB_GIO_LIBRARIES}
         ${GLIB_GOBJECT_LIBRARIES}
         ${GLIB_GTHREAD_LIBRARIES}
-        ${MENUCACHE_LIBRARIES}
         ${XCB_LIBRARIES}
         ${EXIF_LIBRARIES}
 )
@@ -154,16 +146,22 @@ set_target_properties(${LIBFM_QT_LIBRARY_NAME} PROPERTIES
 target_include_directories(${LIBFM_QT_LIBRARY_NAME}
     PRIVATE "${Qt6Gui_PRIVATE_INCLUDE_DIRS}"
         core/legacy
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${CMAKE_BINARY_DIR}/menu-cache/include"
     PUBLIC
         "${GLIB_INCLUDE_DIRS}"
-        "${GLIB_GIO_UNIX_INCLUDE_DIR}"
-        "${MENUCACHE_INCLUDE_DIRS}"
+        "${GLIB_GIO_UNIX_INCLUDE_DIRS}"
         "${XCB_INCLUDE_DIRS}"
         "${EXIF_INCLUDE_DIRS}"
     INTERFACE
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
         "$<BUILD_INTERFACE:${LIBFM_QT_INTREE_INCLUDE_DIR}>"
 )
+
+get_property(_fmqt_interface_includes TARGET ${LIBFM_QT_LIBRARY_NAME} PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+list(REMOVE_ITEM _fmqt_interface_includes "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/")
+set_property(TARGET ${LIBFM_QT_LIBRARY_NAME} PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${_fmqt_interface_includes}")
+message(STATUS "fm-qt6 interface includes: ${_fmqt_interface_includes}")
 
 target_compile_definitions(${LIBFM_QT_LIBRARY_NAME}
     PRIVATE "LIBFM_QT_DATA_DIR=\"${LIBFM_QT_DATA_DIR}\""
@@ -281,3 +279,17 @@ add_executable("test-placesview"
 )
 target_link_libraries("test-placesview" ${TEST_LIBRARIES})
 
+set(_fmqt_test_targets
+    test-folder
+    test-folderview
+    test-filedialog
+    test-volumemanager
+    test-placesview
+)
+
+foreach(test_target IN LISTS _fmqt_test_targets)
+    target_include_directories(${test_target} PRIVATE
+        "${LIBFM_QT_INTREE_INCLUDE_DIR}/libfm-qt6"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+    )
+endforeach()

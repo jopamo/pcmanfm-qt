@@ -15,38 +15,47 @@ set(PCMANFM_QT_VERSION ${PCMANFM_QT_VERSION_MAJOR}.${PCMANFM_QT_VERSION_MINOR}.$
 
 # Minimum versions
 set(LIBFMQT_MINIMUM_VERSION "2.3.0")
-set(LXQTBT_MINIMUM_VERSION "2.3.0")
 set(QT_MINIMUM_VERSION "6.6.0")
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 find_package(Qt6DBus ${QT_MINIMUM_VERSION} REQUIRED)
 find_package(Qt6LinguistTools ${QT_MINIMUM_VERSION} REQUIRED)
 find_package(Qt6Widgets ${QT_MINIMUM_VERSION} REQUIRED)
 find_package(Qt6Concurrent ${QT_MINIMUM_VERSION} REQUIRED)
-find_package(fm-qt6 ${LIBFMQT_MINIMUM_VERSION} REQUIRED)
-find_package(lxqt2-build-tools ${LXQTBT_MINIMUM_VERSION} REQUIRED)
 
-# GIO for trash backend
+# pkg-config dependencies
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(GIO REQUIRED gio-2.0)
 pkg_check_modules(BLAKE3 REQUIRED blake3)
 pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
 pkg_check_modules(CAPSTONE REQUIRED capstone)
 
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/config.h"
+    @ONLY
+)
+include_directories("${CMAKE_CURRENT_BINARY_DIR}")
+
 message(STATUS "Building ${PROJECT_NAME} with Qt ${Qt6Core_VERSION}")
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    message(FATAL_ERROR "In-source builds are not supported. Please use a separate build directory.")
+endif()
 
 option(UPDATE_TRANSLATIONS "Update source translation translations/*.ts files" OFF)
 include(GNUInstallDirs)
-include(LXQtPreventInSourceBuilds)
-include(LXQtConfigVars)
-include(LXQtTranslateTs)
-include(LXQtTranslateDesktop)
-include(LXQtCompilerSettings NO_POLICY_SCOPE)
 
 set(CMAKE_AUTOMOC TRUE)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE OFF)
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_link_options(-Wno-fuse-ld-path)
+endif()
+
+add_subdirectory(libfm)
+add_subdirectory(menu-cache)
+add_subdirectory(libfm-qt)
 add_subdirectory(pcmanfm)
 
 # manpage for pcmanfm-qt
@@ -84,7 +93,7 @@ install(
 add_subdirectory(config)
 
 # Add tests if BUILD_TESTING is enabled
-option(BUILD_TESTING "Build unit tests" OFF)
+include(CTest)
 if(BUILD_TESTING)
     enable_testing()
     add_subdirectory(tests)

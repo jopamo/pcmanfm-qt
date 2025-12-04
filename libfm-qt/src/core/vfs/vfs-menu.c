@@ -30,6 +30,13 @@
 #include <glib/gi18n-lib.h>
 #include <menu-cache.h>
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+#endif
+
 /* libmenu-cache is multithreaded since 0.4.x */
 #define RUN_WITH_MENU_CACHE(__func, __data) __func(__data)
 

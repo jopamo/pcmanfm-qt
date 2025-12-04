@@ -20,8 +20,7 @@
 #ifndef PCMANFM_FOLDERVIEW_H
 #define PCMANFM_FOLDERVIEW_H
 
-#include <libfm-qt6/folderview.h>
-#include <libfm-qt6/core/filepath.h>
+#include "panel/panel.h"
 
 #include <QTimer>
 
@@ -36,17 +35,17 @@ namespace PCManFM {
 
 class Settings;
 
-class View : public Fm::FolderView {
+class View : public Panel::FolderView {
     Q_OBJECT
    public:
-    explicit View(Fm::FolderView::ViewMode _mode = IconMode, QWidget* parent = nullptr);
-    virtual ~View();
+    explicit View(Panel::FolderView::ViewMode _mode = IconMode, QWidget* parent = nullptr);
+    ~View() override;
 
     void updateFromSettings(Settings& settings);
-    void setModel(Fm::ProxyFolderModel* _model);
+    void setModel(Panel::ProxyFolderModel* _model);
 
-    QSize getMargins() const { return Fm::FolderView::getMargins(); }
-    void setMargins(QSize size) { Fm::FolderView::setMargins(size); }
+    QSize getMargins() const { return Panel::FolderView::getMargins(); }
+    void setMargins(QSize size) { Panel::FolderView::setMargins(size); }
 
    protected Q_SLOTS:
     void onNewWindow();
@@ -58,17 +57,17 @@ class View : public Fm::FolderView {
     void onSearch();
 
    protected:
-    virtual void onFileClicked(int type, const std::shared_ptr<const Fm::FileInfo>& fileInfo);
-    virtual void prepareFileMenu(Fm::FileMenu* menu);
-    virtual void prepareFolderMenu(Fm::FolderMenu* menu);
+    void onFileClicked(int type, const std::shared_ptr<const Panel::FileInfo>& fileInfo) override;
+    void prepareFileMenu(Panel::FileMenu* menu) override;
+    void prepareFolderMenu(Panel::FolderMenu* menu) override;
     bool eventFilter(QObject* obj, QEvent* event) override;
 
    private:
-    void launchFiles(Fm::FileInfoList files, bool inNewTabs = false);
-    void openFolderAndSelectFile(const std::shared_ptr<const Fm::FileInfo>& fileInfo, bool inNewTab = false);
+    void launchFiles(Panel::FileInfoList files, bool inNewTabs = false);
+    void openFolderAndSelectFile(const std::shared_ptr<const Panel::FileInfo>& fileInfo, bool inNewTab = false);
     void startArchiveCompression(const QStringList& paths);
     void startArchiveExtraction(const QString& archivePath, const QString& destinationDir);
-    static void removeLibfmArchiverActions(Fm::FileMenu* menu);
+    static void removeLibfmArchiverActions(Panel::FileMenu* menu);
 
     void setupThumbnailHooks();
     void scheduleThumbnailPrefetch();

@@ -54,7 +54,8 @@ void PlacesProxyModel::restoreHiddenItems(const QSet<QString>& items) {
             ++i;
         }
         hiddenItemsRestored_ = true;
-        invalidateFilter();
+        beginFilterChange();
+        endFilterChange();
     }
 }
 
@@ -67,12 +68,14 @@ void PlacesProxyModel::setHidden(const QString& str, bool hide) {
     else {
         hidden_.remove(str);
     }
-    invalidateFilter();
+    beginFilterChange();
+    endFilterChange();
 }
 
 void PlacesProxyModel::showAll(bool show) {
     showAll_ = show;
-    invalidateFilter();
+    beginFilterChange();
+    endFilterChange();
 }
 
 bool PlacesProxyModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const {

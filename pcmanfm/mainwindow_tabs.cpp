@@ -16,8 +16,7 @@
 
 // If using the modernization plan, ensure these headers match the new architecture.
 // For now, retaining Fm headers to maintain compatibility with the provided context.
-#include <libfm-qt6/pathbar.h>
-#include <libfm-qt6/pathedit.h>
+#include "panel/panel.h"
 
 namespace PCManFM {
 
@@ -30,7 +29,7 @@ Settings& appSettings() {
 
 }  // namespace
 
-void MainWindow::addViewFrame(const Fm::FilePath& path) {
+void MainWindow::addViewFrame(const Panel::FilePath& path) {
     ui.actionGo->setVisible(false);
 
     Settings& settings = appSettings();
@@ -83,7 +82,7 @@ void MainWindow::addViewFrame(const Fm::FilePath& path) {
     }
 }
 
-int MainWindow::addTabWithPage(TabPage* page, ViewFrame* viewFrame, Fm::FilePath path) {
+int MainWindow::addTabWithPage(TabPage* page, ViewFrame* viewFrame, Panel::FilePath path) {
     if (!page || !viewFrame) {
         return -1;
     }
@@ -132,12 +131,12 @@ int MainWindow::addTabWithPage(TabPage* page, ViewFrame* viewFrame, Fm::FilePath
 }
 
 // add a new tab
-void MainWindow::addTab(Fm::FilePath path, ViewFrame* viewFrame) {
+void MainWindow::addTab(Panel::FilePath path, ViewFrame* viewFrame) {
     auto* newPage = new TabPage(this);
     addTabWithPage(newPage, viewFrame, path);
 }
 
-void MainWindow::addTab(Fm::FilePath path) {
+void MainWindow::addTab(Panel::FilePath path) {
     auto* app = qobject_cast<Application*>(qApp);
     if (!app) {
         return;
@@ -232,10 +231,10 @@ void MainWindow::onTabBarCurrentChanged(int index) {
     else {
         // If updating a background frame, strictly update its location bar, not the main window UI
         if (TabPage* page = currentPage(viewFrame)) {
-            if (auto* pathBar = qobject_cast<Fm::PathBar*>(viewFrame->getTopBar())) {
+            if (auto* pathBar = qobject_cast<Panel::PathBar*>(viewFrame->getTopBar())) {
                 pathBar->setPath(page->path());
             }
-            else if (auto* pathEntry = qobject_cast<Fm::PathEdit*>(viewFrame->getTopBar())) {
+            else if (auto* pathEntry = qobject_cast<Panel::PathEdit*>(viewFrame->getTopBar())) {
                 pathEntry->setText(page->pathName());
             }
         }
@@ -347,19 +346,19 @@ void MainWindow::setTabIcon(TabPage* tabPage) {
     QStyle::StandardPixmap standardIcon = QStyle::SP_CustomBase;
 
     switch (tabPage->viewMode()) {
-        case Fm::FolderView::IconMode:
+        case Panel::FolderView::IconMode:
             iconName = QStringLiteral("view-list-icons");
             standardIcon = QStyle::SP_FileDialogContentsView;
             break;
-        case Fm::FolderView::CompactMode:
+        case Panel::FolderView::CompactMode:
             iconName = QStringLiteral("view-list-text");
             standardIcon = QStyle::SP_FileDialogListView;
             break;
-        case Fm::FolderView::DetailedListMode:
+        case Panel::FolderView::DetailedListMode:
             iconName = QStringLiteral("view-list-details");
             standardIcon = QStyle::SP_FileDialogDetailedView;
             break;
-        case Fm::FolderView::ThumbnailMode:
+        case Panel::FolderView::ThumbnailMode:
             iconName = QStringLiteral("view-preview");
             standardIcon = QStyle::SP_FileDialogInfoView;
             break;

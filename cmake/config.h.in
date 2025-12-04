@@ -1,0 +1,11 @@
+#pragma once
+
+/* Minimal config header for bundled libfm/menu-cache builds */
+#define GETTEXT_PACKAGE ""
+#define PACKAGE_NAME "pcmanfm-qt"
+#define PACKAGE_VERSION "0.0.0"
+#define PACKAGE_LOCALE_DIR ""
+#define PACKAGE_DATA_DIR ""
+#define PACKAGE_UI_DIR ""
+#define PACKAGE_THEME_DIR ""
+#define PACKAGE_MODULES_DIR ""

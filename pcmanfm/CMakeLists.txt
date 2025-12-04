@@ -92,40 +92,31 @@ set(pcmanfm_UIS
     bulk-rename.ui
 )
 
-# add translation for pcmanfm-qt
-lxqt_translate_ts(QM_FILES
-    UPDATE_TRANSLATIONS ${UPDATE_TRANSLATIONS}
-    SOURCES ${pcmanfm_SRCS} ${pcmanfm_UIS}
-    INSTALL_DIR "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/translations"
+configure_file(
+    pcmanfm-qt.desktop.in
+    "${CMAKE_CURRENT_BINARY_DIR}/pcmanfm-qt.desktop"
+    @ONLY
 )
-
-# translate desktop entry file for pcmanfm-qt
-lxqt_translate_desktop(DESKTOP_FILES
-    SOURCES
-        pcmanfm-qt.desktop.in
-    USE_YAML
-)
+set(PCMANFM_DESKTOP_FILE "${CMAKE_CURRENT_BINARY_DIR}/pcmanfm-qt.desktop")
 
 add_executable(pcmanfm-qt
     ${pcmanfm_SRCS}
     ${pcmanfm_DBUS_SRCS}
     ${pcmanfm_UIS}
-    ${QM_FILES}
-    ${DESKTOP_FILES}
 )
 
 target_compile_definitions(pcmanfm-qt
     PRIVATE
         PCMANFM_DATA_DIR="${CMAKE_INSTALL_PREFIX}/share/pcmanfm-qt"
         PCMANFM_QT_VERSION="${PCMANFM_QT_VERSION}"
-        LIBFM_DATA_DIR="${PKG_FM_PREFIX}/share/libfm"
+        LIBFM_DATA_DIR="${CMAKE_INSTALL_PREFIX}/share/libfm"
 )
 
 target_include_directories(pcmanfm-qt
     PRIVATE
         "${Qt6Gui_PRIVATE_INCLUDE_DIRS}"
         "${CMAKE_CURRENT_BINARY_DIR}/pcmanfm-qt_autogen/include"
-        ${GIO_INCLUDE_DIRS}
+        ../src
         ${BLAKE3_INCLUDE_DIRS}
         ${LIBARCHIVE_INCLUDE_DIRS}
         ${CAPSTONE_INCLUDE_DIRS}
@@ -137,7 +128,6 @@ target_link_libraries(pcmanfm-qt
     Qt6::DBus
     Qt6::Concurrent
     fm-qt6
-    ${GIO_LIBRARIES}
     ${BLAKE3_LIBRARIES}
     ${LIBARCHIVE_LIBRARIES}
     ${CAPSTONE_LIBRARIES}
@@ -153,7 +143,7 @@ endif()
 install(TARGETS pcmanfm-qt RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # install a desktop entry file for pcmanfm-qt and desktop preferences
-install(FILES ${DESKTOP_FILES} DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
+install(FILES "${PCMANFM_DESKTOP_FILE}" DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
 )
 
 # prevent the generated files from being deleted during make clean

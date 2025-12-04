@@ -23,30 +23,20 @@
 #include <QWidget>
 #include <QVBoxLayout>
 #include <QLineEdit>
-#include <libfm-qt6/browsehistory.h>
+#include "panel/panel.h"
 #include "view.h"
 #include "settings.h"
 #include "imagemagick_qt.h"
-
-#include <libfm-qt6/core/fileinfo.h>
-#include <libfm-qt6/core/filepath.h>
-#include <libfm-qt6/core/folder.h>
-
-namespace Fm {
-class FileLauncher;
-class FolderModel;
-class ProxyFolderModel;
-class CachedFolderModel;
-}  // namespace Fm
 
 namespace PCManFM {
 
 class Launcher;
 
-class ProxyFilter : public Fm::ProxyFolderModelFilter {
+class ProxyFilter : public Panel::ProxyFolderModelFilter {
    public:
     ProxyFilter() : fullName_{true} {}
-    bool filterAcceptsRow(const Fm::ProxyFolderModel* model, const std::shared_ptr<const Fm::FileInfo>& info) const;
+    bool filterAcceptsRow(const Panel::ProxyFolderModel* model,
+                          const std::shared_ptr<const Panel::FileInfo>& info) const;
     virtual ~ProxyFilter() {}
     QString getFilterStr() { return filterStr_; }
     void setFilterStr(QString str) { filterStr_ = str; }
@@ -107,11 +97,11 @@ class TabPage : public QWidget {
     explicit TabPage(QWidget* parent = nullptr);
     virtual ~TabPage();
 
-    void chdir(Fm::FilePath newPath, bool addHistory = true);
+    void chdir(Panel::FilePath newPath, bool addHistory = true);
 
-    Fm::FolderView::ViewMode viewMode() { return folderSettings_.viewMode(); }
+    Panel::FolderView::ViewMode viewMode() { return folderSettings_.viewMode(); }
 
-    void setViewMode(Fm::FolderView::ViewMode mode);
+    void setViewMode(Panel::FolderView::ViewMode mode);
 
     void sort(int col, Qt::SortOrder order = Qt::AscendingOrder);
 
@@ -137,21 +127,21 @@ class TabPage : public QWidget {
 
     void saveFolderSorting();
 
-    Fm::FilePath path() { return folder_ ? folder_->path() : Fm::FilePath(); }
+    Panel::FilePath path() { return folder_ ? folder_->path() : Panel::FilePath(); }
 
     QString pathName();
 
-    const std::shared_ptr<Fm::Folder>& folder() { return folder_; }
+    const std::shared_ptr<Panel::Folder>& folder() { return folder_; }
 
-    Fm::FolderModel* folderModel() { return reinterpret_cast<Fm::FolderModel*>(folderModel_); }
+    Panel::FolderModel* folderModel() { return reinterpret_cast<Panel::FolderModel*>(folderModel_); }
 
     View* folderView() { return folderView_; }
 
-    Fm::BrowseHistory& browseHistory() { return history_; }
+    Panel::BrowseHistory& browseHistory() { return history_; }
 
-    Fm::FileInfoList selectedFiles() { return folderView_->selectedFiles(); }
+    Panel::FileInfoList selectedFiles() { return folderView_->selectedFiles(); }
 
-    Fm::FilePathList selectedFilePaths() { return folderView_->selectedFilePaths(); }
+    Panel::FilePathList selectedFilePaths() { return folderView_->selectedFilePaths(); }
 
     void selectAll();
 
@@ -181,9 +171,9 @@ class TabPage : public QWidget {
 
     void updateFromSettings(Settings& settings);
 
-    void setFileLauncher(Fm::FileLauncher* launcher) { folderView_->setFileLauncher(launcher); }
+    void setFileLauncher(Panel::FileLauncher* launcher) { folderView_->setFileLauncher(launcher); }
 
-    Fm::FileLauncher* fileLauncher() { return folderView_->fileLauncher(); }
+    Panel::FileLauncher* fileLauncher() { return folderView_->fileLauncher(); }
 
     QString getFilterStr() {
         if (proxyFilter_) {
@@ -222,7 +212,7 @@ class TabPage : public QWidget {
 
     void createShortcut();
 
-    void setFilesToSelect(const Fm::FilePathList& files) { filesToSelect_ = files; }
+    void setFilesToSelect(const Panel::FilePathList& files) { filesToSelect_ = files; }
 
    Q_SIGNALS:
     void statusChanged(int type, QString statusText);
@@ -240,20 +230,22 @@ class TabPage : public QWidget {
     void onSelChanged();
     void onUiUpdated();
     void onFileSizeChanged(const QModelIndex& index);
-    void onFilesAdded(const Fm::FileInfoList files);
+    void onFilesAdded(const Panel::FileInfoList files);
     void onFilterStringChanged(QString str);
     void onLosingFilterBarFocus();
 
    private:
     void freeFolder();
     QString formatStatusText();
-    void localizeTitle(const Fm::FilePath& path);
+    void localizeTitle(const Panel::FilePath& path);
 
     void onFolderStartLoading();
     void onFolderFinishLoading();
 
     // FIXME: this API design is bad and might be removed later
-    void onFolderError(const Fm::GErrorPtr& err, Fm::Job::ErrorSeverity severity, Fm::Job::ErrorAction& response);
+    void onFolderError(const Panel::GErrorPtr& err,
+                       Panel::Job::ErrorSeverity severity,
+                       Panel::Job::ErrorAction& response);
 
     void onFolderFsInfo();
     void onFolderRemoved();
@@ -262,22 +254,22 @@ class TabPage : public QWidget {
 
    private:
     View* folderView_;
-    Fm::CachedFolderModel* folderModel_;
+    Panel::CachedFolderModel* folderModel_;
     ImageMagickProxyFolderModel* proxyModel_;
     ProxyFilter* proxyFilter_;
     QVBoxLayout* verticalLayout;
-    std::shared_ptr<Fm::Folder> folder_;
+    std::shared_ptr<Panel::Folder> folder_;
     QString title_;
     QString statusText_[StatusTextNum];
-    Fm::BrowseHistory history_;    // browsing history
-    Fm::FilePath lastFolderPath_;  // last browsed folder
+    Panel::BrowseHistory history_;    // browsing history
+    Panel::FilePath lastFolderPath_;  // last browsed folder
     bool overrideCursor_;
     FolderSettings folderSettings_;
     QTimer* selectionTimer_;
     FilterBar* filterBar_;
     QStringList filesToTrust_;
-    Fm::FilePathList filesToSelect_;  // files to select
-    bool changingDir_;                // chdir is in progress
+    Panel::FilePathList filesToSelect_;  // files to select
+    bool changingDir_;                   // chdir is in progress
 };
 
 }  // namespace PCManFM

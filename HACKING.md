@@ -2,7 +2,7 @@
 
 ## 1. Project Overview
 
-PCManFM-Qt is a Qt-based file manager originally started as the Qt port of PCManFM, the file manager of LXDE. This fork removes libfm/libfm-qt and re-implements the core on top of modern C++ and Qt 6, with small, focused GLib/GIO usage where it actually helps.
+PCManFM-Qt is a Qt-based file manager originally started as the Qt port of PCManFM, the file manager of LXDE. This fork vendors the libfm-qt code we still rely on (as `Panel::*`) and re-implements the rest on top of modern C++ and Qt 6 with a POSIX-focused core (no external libfm-qt dependency).
 
 This fork is:
 
@@ -16,7 +16,7 @@ This fork is:
 
 The main technical goal is:
 
-> **Replace libfm/libfm-qt with a modular backend architecture built on Qt, with tiny GIO/udisks helpers for trash, mounts, and optional remote file systems**
+> **Replace libfm/libfm-qt with a modular backend architecture built on Qt, backed by a POSIX filesystem core (Qt-only in-tree; optional helpers can live out-of-tree)**
 
 Concretely:
 
@@ -26,11 +26,6 @@ Concretely:
   * directory models and views
   * metadata, MIME types, icons
   * configuration, standard paths
-* **Minimal GLib/GIO**
-
-  * trash implementation
-  * volume / mount management
-  * optional remote filesystems (sftp, smb, dav, etc)
 * **No libfm / libfm-qt anywhere in the build**
 * **Backends are swappable** behind narrow interfaces in `src/core/`
 * **Filesystem layering:** real file mutations happen in a POSIX-only core; Qt handles UI, metadata, and path conversion only
@@ -58,11 +53,6 @@ src/
       qt_foldermodel.h/.cpp
       qt_fileops.h/.cpp
 
-    gio/
-      gio_trashbackend.h/.cpp
-      gio_volumebackend.h/.cpp
-      gio_remotebackend.h/.cpp
-
   ui/
     application.cpp
     mainwindow.cpp
@@ -77,8 +67,7 @@ src/
 
 * `ui/` knows only about `core/*` interfaces
 * `backends/qt` uses Qt and standard C++ only
-* `backends/gio` uses GLib/GIO and, optionally, udisks2 via D-Bus
-* libfm and libfm-qt are not used anywhere
+* libfm-qt code is vendored in-tree under the `Panel::*` namespace; no external libfm/libfm-qt dependency
 
 ### 3.2 Core Interfaces (Qt-centric)
 
@@ -272,25 +261,7 @@ This lives in the core layer (no Qt includes) and provides the primitives that b
 
 ### 4.3 GIO backend
 
-These are intentionally small and self-contained.
-
-**GioTrashBackend**
-
-* Uses `g_file_trash()` to move files to trash
-* Optionally implements restore later via trash metadata
-* Only deals with trash functionality, not general IO
-
-**GioVolumeBackend**
-
-* Uses `GVolumeMonitor` to discover volumes and mounts
-* Implements mount, unmount, eject
-* Can be extended to use udisks2 over D-Bus for more control
-
-**GioRemoteBackend**
-
-* Recognizes remote URL schemes like `sftp`, `ftp`, `smb`, `dav`, `davs`
-* Integrates with GVFS mounts, mapping remote URLs to local mount points
-* Keeps remote-specific logic out of the Qt core
+Removed from the in-tree build. If trash/volume/remote helpers are needed later, add them as an optional, out-of-tree backend module so the main build stays Qt/POSIX-only.
 
 ## 5. Migration Strategy
 
@@ -300,7 +271,7 @@ These are intentionally small and self-contained.
 2. Rewrite `backends/qt/qt_fileops.*` to be the thin Qt adapter to that core (Qt for path conversion + signals only).
 3. Change UI code in `src/ui/` and `pcmanfm/` to talk to `IFileOps` and the core for real mutations (copy/move/delete/rename/mkdir/permissions/config writes). Keep UI-only metadata and listing in Qt.
 4. Provide a Qt-only configuration (`BackendRegistry::initDefaults()` with only Qt backends) so local file management works without libfm.
-5. Add `GioTrashBackend`, `GioVolumeBackend`, and optionally `GioRemoteBackend`.
+5. Keep the build Qt/POSIX-only; if trash/volume/remote helpers are needed later, add them out-of-tree.
 6. Remove libfm/libfm-qt includes, linkage, and build options.
 
 ### 5.2 Example usage in UI code
@@ -345,8 +316,7 @@ op->start(req)
 
 * CMake 3.18 or newer
 * Qt 6.6 or newer (Widgets, DBus, LinguistTools)
-* GLib and GIO for the `backends/gio` implementation
-* GVFS or equivalent, for trash and remote support
+* GLib/GIO stack and friends required by the vendored Panel (libfm-qt) code
 * lxqt2-build-tools or local replacements as needed in your build system
 
 libfm-qt is only needed if you are building the legacy version. The modernized fork is designed to build without libfm-qt.
@@ -412,7 +382,7 @@ When touching old code that still references libfm/libfm-qt:
 
 * Replace libfm operations with `IFileOps` that delegates to the POSIX core (no new direct `QFile`/`QDir` mutations in UI code)
 * Keep Qt metadata helpers (`QFileInfo`, `QMimeDatabase`, icons) for UI/display only
-* Move new behavior into the Qt or GIO backends, backed by the POSIX core, instead of direct usage in `ui/`
+* Move new behavior into the Qt backends, backed by the POSIX core, instead of direct usage in `ui/`
 * Keep platform assumptions Linux-only (no Windows or legacy Unix shims)
 
 ### 7.4 POSIX core hardening (work in progress)
@@ -456,8 +426,8 @@ The POSIX filesystem core currently supports regular files/dirs with atomic writ
 
 * Copy, move, delete, rename for local files
 * Folder navigation, tabs, back/forward, up
-* Volume listing, mount, unmount, eject (if GIO backend enabled)
-* Trash behavior and error handling
+* Trash behavior and error handling (once a trash backend is wired up)
+* Volume listing, mount, unmount, eject (only if an out-of-tree backend is enabled)
 * Preferences and settings
 * Any new backend code under failure conditions (permissions, missing devices, etc)
 

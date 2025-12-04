@@ -6,7 +6,7 @@
 #include "launcher.h"
 
 // LibFM-Qt Headers
-#include <libfm-qt6/core/filepath.h>
+#include "panel/panel.h"
 
 // Qt Headers
 #include <QApplication>
@@ -28,14 +28,14 @@ Settings& appSettings() {
 }  // namespace
 
 Launcher::Launcher(PCManFM::MainWindow* mainWindow)
-    : Fm::FileLauncher(), mainWindow_(mainWindow), openInNewTab_(false), openWithDefaultFileManager_(false) {
+    : Panel::FileLauncher(), mainWindow_(mainWindow), openInNewTab_(false), openWithDefaultFileManager_(false) {
     setQuickExec(appSettings().quickExec());
 }
 
 Launcher::~Launcher() = default;
 
 // open a list of folders either in an existing main window, in new tabs, or with the system file manager
-bool Launcher::openFolder(GAppLaunchContext* ctx, const Fm::FileInfoList& folderInfos, Fm::GErrorPtr& /*err*/) {
+bool Launcher::openFolder(GAppLaunchContext* ctx, const Panel::FileInfoList& folderInfos, Panel::GErrorPtr& /*err*/) {
     if (folderInfos.empty()) {
         return false;
     }
@@ -47,7 +47,7 @@ bool Launcher::openFolder(GAppLaunchContext* ctx, const Fm::FileInfoList& folder
     const auto end = folderInfos.cend();
 
     // Handle the first folder specifically (it might create the window)
-    Fm::FilePath firstPath = (*it)->path();
+    Panel::FilePath firstPath = (*it)->path();
 
     if (!mainWindow) {
         // If there is no PCManFM-Qt main window, we may delegate to the system default file manager.
@@ -56,12 +56,12 @@ bool Launcher::openFolder(GAppLaunchContext* ctx, const Fm::FileInfoList& folder
         //   2) we are not explicitly opening in new tabs
         //   3) the default file manager exists and is not pcmanfm-qt itself
         if (openWithDefaultFileManager_ && !openInNewTab_) {
-            auto defaultApp = Fm::GAppInfoPtr{g_app_info_get_default_for_type("inode/directory", FALSE), false};
+            auto defaultApp = Panel::GAppInfoPtr{g_app_info_get_default_for_type("inode/directory", FALSE), false};
 
             // Check if default app exists and is NOT this application
             if (defaultApp && std::strcmp(g_app_info_get_id(defaultApp.get()), "pcmanfm-qt.desktop") != 0) {
                 for (const auto& folder : folderInfos) {
-                    Fm::FileLauncher::launchWithDefaultApp(folder, ctx);
+                    Panel::FileLauncher::launchWithDefaultApp(folder, ctx);
                 }
                 return true;
             }

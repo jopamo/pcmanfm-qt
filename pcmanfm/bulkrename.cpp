@@ -7,7 +7,7 @@
 
 // If you are migrating away from libfm-qt entirely, you will eventually
 // replace this header with your own Core/FileOps interface.
-#include <libfm-qt6/utilities.h>
+#include "panel/panel.h"
 
 #include <QFileInfo>
 #include <QLocale>
@@ -24,7 +24,7 @@ namespace {
 // Helper to resolve a usable name from FileInfo, respecting edit name and encoding
 // Refactored to avoid direct GLib calls where possible if the wrapper allows,
 // otherwise ensuring safe string conversion.
-QString effectiveFileName(const std::shared_ptr<const Fm::FileInfo>& file) {
+QString effectiveFileName(const std::shared_ptr<const Panel::FileInfo>& file) {
     // If migrating away from libfm, this would use QFileInfo directly.
     // For now, we prefer the display name logic but handle potential empty names.
 
@@ -130,7 +130,7 @@ void BulkRenameDialog::showEvent(QShowEvent* event) {
 // BulkRenamer Class
 //-----------------------------------------------------------------------------
 
-BulkRenamer::BulkRenamer(const Fm::FileInfoList& files, QWidget* parent) {
+BulkRenamer::BulkRenamer(const Panel::FileInfoList& files, QWidget* parent) {
     if (files.size() <= 1) {
         return;
     }
@@ -195,7 +195,7 @@ BulkRenamer::BulkRenamer(const Fm::FileInfoList& files, QWidget* parent) {
 
 BulkRenamer::~BulkRenamer() = default;
 
-bool BulkRenamer::rename(const Fm::FileInfoList& files,
+bool BulkRenamer::rename(const Panel::FileInfoList& files,
                          QString& baseName,
                          const QLocale& locale,
                          int start,
@@ -254,9 +254,9 @@ bool BulkRenamer::rename(const Fm::FileInfoList& files,
 
         // Skip rename if name hasn't changed
         if (newName != fileName) {
-            // NOTE: Fm::changeFileName is a LibFM-Qt function.
+            // NOTE: Panel::changeFileName is a LibFM-Qt function.
             // In the future architecture, this should call BackendRegistry::fileOps()->rename(...)
-            if (!Fm::changeFileName(file->path(), newName, nullptr, false)) {
+            if (!Panel::changeFileName(file->path(), newName, nullptr, false)) {
                 ++failed;
             }
         }
@@ -278,7 +278,7 @@ bool BulkRenamer::rename(const Fm::FileInfoList& files,
     return true;
 }
 
-bool BulkRenamer::renameByReplacing(const Fm::FileInfoList& files,
+bool BulkRenamer::renameByReplacing(const Panel::FileInfoList& files,
                                     const QString& findStr,
                                     const QString& replaceStr,
                                     Qt::CaseSensitivity cs,
@@ -329,7 +329,7 @@ bool BulkRenamer::renameByReplacing(const Fm::FileInfoList& files,
 
         // Only attempt rename if the name actually changed
         if (!newName.isEmpty() && newName != fileName) {
-            if (!Fm::changeFileName(file->path(), newName, nullptr, false)) {
+            if (!Panel::changeFileName(file->path(), newName, nullptr, false)) {
                 ++failed;
             }
         }
@@ -351,7 +351,7 @@ bool BulkRenamer::renameByReplacing(const Fm::FileInfoList& files,
     return true;
 }
 
-bool BulkRenamer::renameByChangingCase(const Fm::FileInfoList& files,
+bool BulkRenamer::renameByChangingCase(const Panel::FileInfoList& files,
                                        const QLocale& locale,
                                        bool toUpperCase,
                                        QWidget* parent) {
@@ -374,7 +374,7 @@ bool BulkRenamer::renameByChangingCase(const Fm::FileInfoList& files,
         QString newName = toUpperCase ? locale.toUpper(fileName) : locale.toLower(fileName);
 
         if (!newName.isEmpty() && newName != fileName) {
-            if (!Fm::changeFileName(file->path(), newName, nullptr, false)) {
+            if (!Panel::changeFileName(file->path(), newName, nullptr, false)) {
                 ++failed;
             }
         }

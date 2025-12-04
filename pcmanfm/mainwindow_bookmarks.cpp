@@ -8,7 +8,7 @@
 #include <QMenu>
 #include <algorithm>
 
-#include <libfm-qt6/core/bookmarks.h>
+#include "panel/panel.h"
 
 #include "application.h"
 #include "mainwindow.h"
@@ -66,12 +66,12 @@ void MainWindow::on_actionAddToBookmarks_triggered() {
         return;
     }
 
-    const Fm::FilePath path = page->path();
+    const Panel::FilePath path = page->path();
     if (!path) {
         return;
     }
 
-    auto bookmarks = Fm::Bookmarks::globalInstance();
+    auto bookmarks = Panel::Bookmarks::globalInstance();
     if (!bookmarks) {
         return;
     }
@@ -79,7 +79,7 @@ void MainWindow::on_actionAddToBookmarks_triggered() {
     const auto& items = bookmarks->items();
     const bool alreadyBookmarked = std::any_of(
         items.cbegin(), items.cend(),
-        [&path](const std::shared_ptr<const Fm::BookmarkItem>& item) { return item && item->path() == path; });
+        [&path](const std::shared_ptr<const Panel::BookmarkItem>& item) { return item && item->path() == path; });
     if (alreadyBookmarked) {
         return;
     }

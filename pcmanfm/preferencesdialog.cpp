@@ -5,9 +5,7 @@
 
 #include "preferencesdialog.h"
 
-#include <libfm-qt6/core/archiver.h>
-#include <libfm-qt6/core/terminal.h>
-#include <libfm-qt6/folderview.h>
+#include "panel/panel.h"
 
 #include <QDir>
 #include <QHash>
@@ -136,7 +134,7 @@ void PreferencesDialog::initIconThemes(Settings& settings) {
 }
 
 void PreferencesDialog::initArchivers(Settings& settings) {
-    const auto& allArchivers = Fm::Archiver::allArchivers();
+    const auto& allArchivers = Panel::Archiver::allArchivers();
     for (int i = 0; i < int(allArchivers.size()); ++i) {
         auto& archiver = allArchivers[i];
         QString program = QString::fromUtf8(archiver->program());
@@ -204,10 +202,10 @@ void PreferencesDialog::initBehaviorPage(Settings& settings) {
 
     ui.bookmarkOpenMethod->setCurrentIndex(settings.bookmarkOpenMethod());
 
-    ui.viewMode->addItem(tr("Icon View"), int(Fm::FolderView::IconMode));
-    ui.viewMode->addItem(tr("Compact View"), int(Fm::FolderView::CompactMode));
-    ui.viewMode->addItem(tr("Thumbnail View"), int(Fm::FolderView::ThumbnailMode));
-    ui.viewMode->addItem(tr("Detailed List View"), int(Fm::FolderView::DetailedListMode));
+    ui.viewMode->addItem(tr("Icon View"), int(Panel::FolderView::IconMode));
+    ui.viewMode->addItem(tr("Compact View"), int(Panel::FolderView::CompactMode));
+    ui.viewMode->addItem(tr("Thumbnail View"), int(Panel::FolderView::ThumbnailMode));
+    ui.viewMode->addItem(tr("Detailed List View"), int(Panel::FolderView::DetailedListMode));
 
     int index = ui.viewMode->findData(int(settings.viewMode()));
     if (index != -1) {
@@ -249,7 +247,7 @@ void PreferencesDialog::initVolumePage(Settings& /*settings*/) {}
 
 void PreferencesDialog::initTerminals(Settings& settings) {
     // populate terminal list from libfm-qt known terminals
-    for (const auto& terminal : Fm::allKnownTerminals()) {
+    for (const auto& terminal : Panel::allKnownTerminals()) {
         ui.terminal->addItem(QString::fromUtf8(terminal.get()));
     }
 
@@ -317,7 +315,7 @@ void PreferencesDialog::terminalContextMenu(const QPoint& p) {
                 ui.terminal->clear();
                 ui.terminal->clearEditText();
 
-                for (const auto& terminal : Fm::allKnownTerminals()) {
+                for (const auto& terminal : Panel::allKnownTerminals()) {
                     ui.terminal->addItem(QString::fromUtf8(terminal.get()));
                 }
             }
@@ -412,7 +410,7 @@ void PreferencesDialog::applyBehaviorPage(Settings& settings) {
     settings.setBookmarkOpenMethod(OpenDirTargetType(ui.bookmarkOpenMethod->currentIndex()));
 
     // view mode is stored in the user data of the combo box items
-    Fm::FolderView::ViewMode mode = Fm::FolderView::ViewMode(ui.viewMode->currentData().toInt());
+    Panel::FolderView::ViewMode mode = Panel::FolderView::ViewMode(ui.viewMode->currentData().toInt());
     settings.setViewMode(mode);
 
     settings.setConfirmDelete(ui.configmDelete->isChecked());
@@ -454,7 +452,7 @@ void PreferencesDialog::applyTerminal(Settings& settings) {
     const QString dataDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
     if (!dataDir.isEmpty()) {
         bool isGlobal = false;
-        for (const auto& terminal : Fm::internalTerminals()) {
+        for (const auto& terminal : Panel::internalTerminals()) {
             if (term == QString::fromUtf8(terminal.get())) {
                 isGlobal = true;
                 break;

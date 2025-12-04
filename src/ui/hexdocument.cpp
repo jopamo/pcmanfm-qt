@@ -610,11 +610,11 @@ bool HexDocument::findForwardUnlocked(const QByteArray& needle,
     }
 
     constexpr std::uint64_t kWindow = 4096 * 4;
+    const std::uint64_t needleSize = static_cast<std::uint64_t>(needle.size());
     std::uint64_t pos = startOffset;
     while (pos < totalSize_) {
         const std::uint64_t remaining = totalSize_ - pos;
-        const std::uint64_t readLen =
-            std::min<std::uint64_t>(remaining, kWindow + static_cast<std::uint64_t>(needle.size()));
+        const std::uint64_t readLen = std::min<std::uint64_t>(remaining, kWindow + needleSize);
         QByteArray buffer;
         if (!readFromSegments(pos, readLen, buffer, errorOut)) {
             return false;
@@ -624,10 +624,10 @@ bool HexDocument::findForwardUnlocked(const QByteArray& needle,
             foundOffset = pos + static_cast<std::uint64_t>(idx);
             return true;
         }
-        if (readLen <= static_cast<std::uint64_t>(needle.size())) {
+        if (readLen <= needleSize) {
             break;
         }
-        pos += readLen - static_cast<std::uint64_t>(needle.size());
+        pos += readLen - needleSize;
     }
     return false;
 }
@@ -649,6 +649,7 @@ bool HexDocument::findBackwardUnlocked(const QByteArray& needle,
         errorOut = tr("Search pattern cannot be empty.");
         return false;
     }
+    const std::uint64_t needleSize = static_cast<std::uint64_t>(needle.size());
     if (startOffset > totalSize_) {
         startOffset = totalSize_;
     }
@@ -658,7 +659,7 @@ bool HexDocument::findBackwardUnlocked(const QByteArray& needle,
 
     while (true) {
         const std::uint64_t begin = (pos > kWindow) ? pos - kWindow : 0;
-        const std::uint64_t length = pos - begin + static_cast<std::uint64_t>(needle.size());
+        const std::uint64_t length = pos - begin + needleSize;
 
         QByteArray buffer;
         if (!readFromSegments(begin, length, buffer, errorOut)) {
@@ -673,10 +674,10 @@ bool HexDocument::findBackwardUnlocked(const QByteArray& needle,
         if (begin == 0) {
             break;
         }
-        if (begin < needle.size()) {
+        if (begin < needleSize) {
             break;
         }
-        pos = begin - static_cast<std::uint64_t>(needle.size());
+        pos = begin - needleSize;
     }
     return false;
 }

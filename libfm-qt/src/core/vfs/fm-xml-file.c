@@ -93,7 +93,7 @@ struct _FmXmlFileItem {
     gchar* comment; /* a little trick: it is equal to text if it is CDATA */
 };
 
-G_DEFINE_TYPE(FmXmlFile, fm_xml_file, G_TYPE_OBJECT);
+G_DEFINE_TYPE(FmXmlFile, fm_xml_file, G_TYPE_OBJECT)
 
 static void fm_xml_file_finalize(GObject* object) {
     FmXmlFile* self;
@@ -1097,6 +1097,7 @@ gboolean fm_xml_file_insert_first(FmXmlFile* file, FmXmlFileItem* new_item) {
  * Since: 1.2.0
  */
 void fm_xml_file_set_dtd(FmXmlFile* file, const char* dtd, GError** error) {
+    (void)error;
     if (file == NULL)
         return;
     /* FIXME: validate dtd */

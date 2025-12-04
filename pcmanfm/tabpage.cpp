@@ -5,11 +5,7 @@
 
 #include "tabpage.h"
 
-#include <libfm-qt6/cachedfoldermodel.h>
-#include <libfm-qt6/core/fileinfo.h>
-#include <libfm-qt6/filemenu.h>
-#include <libfm-qt6/proxyfoldermodel.h>
-#include <libfm-qt6/utilities.h>
+#include "panel/panel.h"
 
 #include <QApplication>
 #include <QCursor>
@@ -27,7 +23,7 @@
 #include "launcher.h"
 #include "settings.h"
 
-using namespace Fm;
+using namespace Panel;
 
 namespace {
 // Constants for timer delays to avoid magic numbers
@@ -41,7 +37,7 @@ PCManFM::Settings& appSettings() {
 
 // Helper function to format status for a single file.
 // Defined here as static to avoid modifying the header file.
-QString formatSingleFileStatus(const std::shared_ptr<const Fm::FileInfo>& fi, const PCManFM::Settings& settings) {
+QString formatSingleFileStatus(const std::shared_ptr<const Panel::FileInfo>& fi, const PCManFM::Settings& settings) {
     bool showRealName = settings.showFullNames() && strcmp(fi->dirPath().uriScheme().get(), "menu") != 0;
 
     QString name = showRealName ? QString::fromStdString(fi->name()) : fi->displayName();
@@ -61,7 +57,7 @@ QString formatSingleFileStatus(const std::shared_ptr<const Fm::FileInfo>& fi, co
     }
 
     // It is a file
-    QString sizeStr = Fm::formatFileSize(fi->size(), fm_config->si_unit);
+    QString sizeStr = Panel::formatFileSize(fi->size(), fm_config->si_unit);
 
     if (fi->isSymlink()) {
         return QStringLiteral("\"%1\" (%2) %3 (%4)").arg(name, sizeStr, mimeStr, linkTarget);
@@ -78,8 +74,8 @@ namespace PCManFM {
 // ProxyFilter Implementation
 //==================================================
 
-bool ProxyFilter::filterAcceptsRow(const Fm::ProxyFolderModel* model,
-                                   const std::shared_ptr<const Fm::FileInfo>& info) const {
+bool ProxyFilter::filterAcceptsRow(const Panel::ProxyFolderModel* model,
+                                   const std::shared_ptr<const Panel::FileInfo>& info) const {
     if (!model || !info) {
         return true;
     }
@@ -233,8 +229,8 @@ TabPage::~TabPage() {
     }
 
     if (folderModel_) {
-        disconnect(folderModel_, &Fm::FolderModel::fileSizeChanged, this, &TabPage::onFileSizeChanged);
-        disconnect(folderModel_, &Fm::FolderModel::filesAdded, this, &TabPage::onFilesAdded);
+        disconnect(folderModel_, &Panel::FolderModel::fileSizeChanged, this, &TabPage::onFileSizeChanged);
+        disconnect(folderModel_, &Panel::FolderModel::filesAdded, this, &TabPage::onFilesAdded);
         folderModel_->unref();
     }
 
@@ -356,7 +352,7 @@ void TabPage::freeFolder() {
 
 void TabPage::onFolderStartLoading() {
     if (folderModel_) {
-        disconnect(folderModel_, &Fm::FolderModel::filesAdded, this, &TabPage::onFilesAdded);
+        disconnect(folderModel_, &Panel::FolderModel::filesAdded, this, &TabPage::onFilesAdded);
     }
     if (!overrideCursor_) {
         QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
@@ -368,7 +364,7 @@ void TabPage::onUiUpdated() {
     bool scrolled = false;
     // if there are files to select, select them
     if (!filesToSelect_.empty()) {
-        Fm::FileInfoList infos;
+        Panel::FileInfoList infos;
         for (const auto& file : filesToSelect_) {
             if (auto info = proxyModel_->fileInfoFromPath(file)) {
                 infos.push_back(info);
@@ -407,9 +403,9 @@ void TabPage::onUiUpdated() {
 
     if (folderModel_) {
         // update selection statusbar info when needed
-        connect(folderModel_, &Fm::FolderModel::fileSizeChanged, this, &TabPage::onFileSizeChanged);
+        connect(folderModel_, &Panel::FolderModel::fileSizeChanged, this, &TabPage::onFileSizeChanged);
         // get ready to select files that may be added later
-        connect(folderModel_, &Fm::FolderModel::filesAdded, this, &TabPage::onFilesAdded);
+        connect(folderModel_, &Panel::FolderModel::filesAdded, this, &TabPage::onFilesAdded);
     }
 
     // in the single-click mode, set the cursor shape of the view to a pointing
@@ -438,7 +434,7 @@ void TabPage::onFileSizeChanged(const QModelIndex& index) {
 }
 
 // slot
-void TabPage::onFilesAdded(Fm::FileInfoList files) {
+void TabPage::onFilesAdded(Panel::FileInfoList files) {
     if (appSettings().selectNewFiles()) {
         if (!selectionTimer_) {
             selectionTimer_ = new QTimer(this);
@@ -474,7 +470,7 @@ void TabPage::onFilesAdded(Fm::FileInfoList files) {
     }
 }
 
-void TabPage::localizeTitle(const Fm::FilePath& path) {
+void TabPage::localizeTitle(const Panel::FilePath& path) {
     // force localization for some virtual locations represented by libfm-qt URIs
     if (!path.isNative()) {
         if (path.hasUriScheme("search")) {
@@ -521,13 +517,15 @@ void TabPage::onFolderFinishLoading() {
     QTimer::singleShot(kUiUpdateDelay, this, &TabPage::onUiUpdated);
 }
 
-void TabPage::onFolderError(const Fm::GErrorPtr& err, Fm::Job::ErrorSeverity severity, Fm::Job::ErrorAction& response) {
+void TabPage::onFolderError(const Panel::GErrorPtr& err,
+                            Panel::Job::ErrorSeverity severity,
+                            Panel::Job::ErrorAction& response) {
     // Only show more severe errors to the users and ignore milder errors.
-    if (folder_ && severity >= Fm::Job::ErrorSeverity::MODERATE) {
+    if (folder_ && severity >= Panel::Job::ErrorSeverity::MODERATE) {
         QMessageBox::critical(this, tr("Error"), err.message());
     }
 
-    response = Fm::Job::ErrorAction::CONTINUE;
+    response = Panel::Job::ErrorAction::CONTINUE;
 }
 
 void TabPage::onFolderFsInfo() {
@@ -568,7 +566,7 @@ QString TabPage::formatStatusText() {
 void TabPage::onFolderRemoved() {
     // the folder we're showing is removed, destroy the widget
     qDebug("folder removed");
-    chdir(Fm::FilePath::homeDir());
+    chdir(Panel::FilePath::homeDir());
 }
 
 void TabPage::onFolderUnmount() {
@@ -598,7 +596,7 @@ QString TabPage::pathName() {
     return QString::fromUtf8(dispPath.get());
 }
 
-void TabPage::chdir(Fm::FilePath newPath, bool addHistory) {
+void TabPage::chdir(Panel::FilePath newPath, bool addHistory) {
     if (filterBar_) {
         filterBar_->clear();
     }
@@ -628,8 +626,8 @@ void TabPage::chdir(Fm::FilePath newPath, bool addHistory) {
 
         // free the previous model
         if (folderModel_) {
-            disconnect(folderModel_, &Fm::FolderModel::fileSizeChanged, this, &TabPage::onFileSizeChanged);
-            disconnect(folderModel_, &Fm::FolderModel::filesAdded, this, &TabPage::onFilesAdded);
+            disconnect(folderModel_, &Panel::FolderModel::fileSizeChanged, this, &TabPage::onFileSizeChanged);
+            disconnect(folderModel_, &Panel::FolderModel::filesAdded, this, &TabPage::onFilesAdded);
             proxyModel_->setSourceModel(nullptr);
             folderModel_->unref();  // unref the cached model
             folderModel_ = nullptr;
@@ -647,18 +645,18 @@ void TabPage::chdir(Fm::FilePath newPath, bool addHistory) {
     localizeTitle(newPath);
     Q_EMIT titleChanged();
 
-    folder_ = Fm::Folder::fromPath(newPath);
+    folder_ = Panel::Folder::fromPath(newPath);
     if (addHistory) {
         // add current path to browse history
         history_.add(path());
     }
-    connect(folder_.get(), &Fm::Folder::startLoading, this, &TabPage::onFolderStartLoading);
-    connect(folder_.get(), &Fm::Folder::finishLoading, this, &TabPage::onFolderFinishLoading);
-    connect(folder_.get(), &Fm::Folder::error, this, &TabPage::onFolderError);
-    connect(folder_.get(), &Fm::Folder::fileSystemChanged, this, &TabPage::onFolderFsInfo);
-    connect(folder_.get(), &Fm::Folder::removed, this, &TabPage::onFolderRemoved);
-    connect(folder_.get(), &Fm::Folder::unmount, this, &TabPage::onFolderUnmount);
-    connect(folder_.get(), &Fm::Folder::contentChanged, this, &TabPage::onFolderContentChanged);
+    connect(folder_.get(), &Panel::Folder::startLoading, this, &TabPage::onFolderStartLoading);
+    connect(folder_.get(), &Panel::Folder::finishLoading, this, &TabPage::onFolderFinishLoading);
+    connect(folder_.get(), &Panel::Folder::error, this, &TabPage::onFolderError);
+    connect(folder_.get(), &Panel::Folder::fileSystemChanged, this, &TabPage::onFolderFsInfo);
+    connect(folder_.get(), &Panel::Folder::removed, this, &TabPage::onFolderRemoved);
+    connect(folder_.get(), &Panel::Folder::unmount, this, &TabPage::onFolderUnmount);
+    connect(folder_.get(), &Panel::Folder::contentChanged, this, &TabPage::onFolderContentChanged);
 
     Settings& settings = appSettings();
     folderModel_ = CachedFolderModel::modelFromFolder(folder_);
@@ -708,7 +706,7 @@ void TabPage::invertSelection() {
 void TabPage::reload() {
     if (folder_) {
         // don't select or scroll to the previous folder after reload
-        lastFolderPath_ = Fm::FilePath();
+        lastFolderPath_ = Panel::FilePath();
 
         // but remember the current scroll position
         BrowseHistoryItem& item = history_.currentItem();
@@ -751,7 +749,7 @@ void TabPage::onSelChanged() {
                 sum += fi->size();
             }
             if (!dirFound) {
-                msg += QStringLiteral(" (%1)").arg(Fm::formatFileSize(sum, fm_config->si_unit));
+                msg += QStringLiteral(" (%1)").arg(Panel::formatFileSize(sum, fm_config->si_unit));
             }
         }
     }
@@ -812,7 +810,7 @@ void TabPage::updateFromSettings(Settings& settings) {
     }
 }
 
-void TabPage::setViewMode(Fm::FolderView::ViewMode mode) {
+void TabPage::setViewMode(Panel::FolderView::ViewMode mode) {
     Settings& settings = appSettings();
     if (folderSettings_.viewMode() != mode) {
         folderSettings_.setViewMode(mode);
@@ -820,7 +818,7 @@ void TabPage::setViewMode(Fm::FolderView::ViewMode mode) {
             settings.saveFolderSettings(path(), folderSettings_);
         }
     }
-    Fm::FolderView::ViewMode prevMode = folderView_->viewMode();
+    Panel::FolderView::ViewMode prevMode = folderView_->viewMode();
     folderView_->setViewMode(mode);
     if (folderView_->isVisible()) {  // in the current tab
         folderView_->childView()->setFocus();
@@ -880,7 +878,7 @@ void TabPage::saveFolderSorting() {
         return;
     }
     folderSettings_.setSortOrder(proxyModel_->sortOrder());
-    folderSettings_.setSortColumn(static_cast<Fm::FolderModel::ColumnId>(proxyModel_->sortColumn()));
+    folderSettings_.setSortColumn(static_cast<Panel::FolderModel::ColumnId>(proxyModel_->sortColumn()));
     folderSettings_.setSortFolderFirst(proxyModel_->folderFirst());
     folderSettings_.setSortHiddenLast(proxyModel_->hiddenLast());
     folderSettings_.setSortCaseSensitive(proxyModel_->sortCaseSensitivity());

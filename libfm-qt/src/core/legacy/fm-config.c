@@ -42,7 +42,7 @@
 static FmConfig globalConfig_;
 FmConfig* fm_config = &globalConfig_;
 
-void fm_config_init() {
+void fm_config_init(void) {
     FmConfig* self = fm_config;
     self->single_click = FM_CONFIG_DEFAULT_SINGLE_CLICK;
     self->auto_selection_delay = FM_CONFIG_DEFAULT_AUTO_SELECTION_DELAY;

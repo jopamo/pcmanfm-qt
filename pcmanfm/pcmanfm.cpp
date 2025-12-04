@@ -3,7 +3,7 @@
  * pcmanfm/pcmanfm.cpp
  */
 
-#include <libfm-qt6/libfmqt.h>
+#include "panel/panel.h"
 
 #include "../src/core/backend_registry.h"
 #include "application.h"

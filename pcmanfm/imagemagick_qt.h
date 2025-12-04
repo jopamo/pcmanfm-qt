@@ -18,8 +18,7 @@
 #include <QThreadPool>
 #include <memory>
 
-#include <libfm-qt6/proxyfoldermodel.h>
-#include <libfm-qt6/core/fileinfo.h>
+#include "panel/panel.h"
 
 #include "imagemagick_support.h"
 
@@ -31,7 +30,7 @@ QImage createThumbnailImageMagick(const QString& path, const QSize& thumbSize);
 QPixmap createPreviewPixmapMagick(const QString& path, const QSize& maxSize);
 QPixmap createImagePixmapMagick(const QString& path);
 
-class ImageMagickProxyFolderModel : public Fm::ProxyFolderModel {
+class ImageMagickProxyFolderModel : public Panel::ProxyFolderModel {
     Q_OBJECT
    public:
     explicit ImageMagickProxyFolderModel(QObject* parent = nullptr);
@@ -43,10 +42,10 @@ class ImageMagickProxyFolderModel : public Fm::ProxyFolderModel {
     void prefetchThumbnails(const QModelIndexList& indexes) const;
 
    private:
-    bool isImageFile(const std::shared_ptr<const Fm::FileInfo>& info) const;
-    QString pathForFile(const std::shared_ptr<const Fm::FileInfo>& info) const;
+    bool isImageFile(const std::shared_ptr<const Panel::FileInfo>& info) const;
+    QString pathForFile(const std::shared_ptr<const Panel::FileInfo>& info) const;
     QString cacheKey(const QString& path, int size, quint64 mtime) const;
-    void requestThumbnailForIndex(const QModelIndex& index, const std::shared_ptr<const Fm::FileInfo>& info) const;
+    void requestThumbnailForIndex(const QModelIndex& index, const std::shared_ptr<const Panel::FileInfo>& info) const;
 
    private:
     mutable QCache<QString, QPixmap> thumbnailCache_;

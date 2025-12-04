@@ -20,12 +20,7 @@
 #ifndef FM_MAIN_WINDOW_H
 #define FM_MAIN_WINDOW_H
 
-#include <libfm-qt6/core/bookmarks.h>
-#include <libfm-qt6/core/filepath.h>
-#include <libfm-qt6/fileoperation.h>
-#include <libfm-qt6/pathbar.h>
-#include <libfm-qt6/pathedit.h>
-#include <libfm-qt6/utilities.h>
+#include "panel/panel.h"
 
 #include <QFrame>
 #include <QLabel>
@@ -74,14 +69,14 @@ class Settings;
 class MainWindow : public QMainWindow {
     Q_OBJECT
    public:
-    MainWindow(Fm::FilePath path = Fm::FilePath());
+    MainWindow(Panel::FilePath path = Panel::FilePath());
     virtual ~MainWindow();
 
-    void chdir(Fm::FilePath path, ViewFrame* viewFrame);
-    void chdir(Fm::FilePath path) { chdir(path, activeViewFrame_); }
+    void chdir(Panel::FilePath path, ViewFrame* viewFrame);
+    void chdir(Panel::FilePath path) { chdir(path, activeViewFrame_); }
 
-    void addTab(Fm::FilePath path, ViewFrame* viewFrame);
-    void addTab(Fm::FilePath path);
+    void addTab(Panel::FilePath path, ViewFrame* viewFrame);
+    void addTab(Panel::FilePath path);
 
     TabPage* currentPage(ViewFrame* viewFrame) {
         return reinterpret_cast<TabPage*>(viewFrame->getStackedWidget()->currentWidget());
@@ -92,13 +87,13 @@ class MainWindow : public QMainWindow {
 
     static MainWindow* lastActive() { return lastActive_; }
 
-    void openFolderAndSelectFiles(const Fm::FilePathList& files, bool inNewTab = true);
+    void openFolderAndSelectFiles(const Panel::FilePathList& files, bool inNewTab = true);
 
    protected Q_SLOTS:
 
     void onPathEntryReturnPressed();
-    void onPathBarChdir(const Fm::FilePath& dirPath);
-    void onPathBarMiddleClickChdir(const Fm::FilePath& dirPath);
+    void onPathBarChdir(const Panel::FilePath& dirPath);
+    void onPathBarMiddleClickChdir(const Panel::FilePath& dirPath);
 
     void on_actionNewTab_triggered();
     void on_actionNewWin_triggered();
@@ -189,12 +184,12 @@ class MainWindow : public QMainWindow {
     void onTabPageStatusChanged(int type, QString statusText);
     void onTabPageSortFilterChanged();
 
-    void onSidePaneChdirRequested(int type, const Fm::FilePath& path);
-    void onSidePaneOpenFolderInNewWindowRequested(const Fm::FilePath& path);
-    void onSidePaneOpenFolderInNewTabRequested(const Fm::FilePath& path);
-    void onSidePaneOpenFolderInTerminalRequested(const Fm::FilePath& path);
-    void onSidePaneCreateNewFolderRequested(const Fm::FilePath& path);
-    void onSidePaneModeChanged(Fm::SidePane::Mode mode);
+    void onSidePaneChdirRequested(int type, const Panel::FilePath& path);
+    void onSidePaneOpenFolderInNewWindowRequested(const Panel::FilePath& path);
+    void onSidePaneOpenFolderInNewTabRequested(const Panel::FilePath& path);
+    void onSidePaneOpenFolderInTerminalRequested(const Panel::FilePath& path);
+    void onSidePaneCreateNewFolderRequested(const Panel::FilePath& path);
+    void onSidePaneModeChanged(Panel::SidePane::Mode mode);
     void on_actionSidePane_triggered(bool check);
     void onSplitterMoved(int pos, int index);
     void onResetFocus();
@@ -252,19 +247,19 @@ class MainWindow : public QMainWindow {
     void createPathBar(bool usePathButtons);
     void createSplitViewPathBar(bool usePathButtons);
     void createSingleViewPathBar(bool usePathButtons);
-    void addViewFrame(const Fm::FilePath& path);
+    void addViewFrame(const Panel::FilePath& path);
     ViewFrame* viewFrameForTabPage(TabPage* page);
-    int addTabWithPage(TabPage* page, ViewFrame* viewFrame, Fm::FilePath path = Fm::FilePath());
+    int addTabWithPage(TabPage* page, ViewFrame* viewFrame, Panel::FilePath path = Panel::FilePath());
     void dropTab(QObject* source);
     void applyFrameActivation(ViewFrame* newActiveFrame);
     void setTabIcon(TabPage* tabPage);
 
    private:
     Ui::MainWindow ui;
-    Fm::PathEdit* pathEntry_;
-    Fm::PathBar* pathBar_;
+    Panel::PathEdit* pathEntry_;
+    Panel::PathBar* pathBar_;
     QLabel* fsInfoLabel_;
-    std::shared_ptr<Fm::Bookmarks> bookmarks_;
+    std::shared_ptr<Panel::Bookmarks> bookmarks_;
     Launcher fileLauncher_;
     int rightClickIndex_;
     bool updatingViewMenu_;

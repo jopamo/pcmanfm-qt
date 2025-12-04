@@ -15,14 +15,8 @@
 #include <unordered_map>
 #include <vector>
 
-// LibFM-Qt Headers
-#include <libfm-qt6/core/bookmarks.h>
-#include <libfm-qt6/core/fileinfojob.h>
-#include <libfm-qt6/core/folderconfig.h>
-#include <libfm-qt6/core/archiver.h>
-#include <libfm-qt6/core/terminal.h>
-#include <libfm-qt6/filepropsdialog.h>
-#include <libfm-qt6/filesearchdialog.h>
+// Panel (libfm-qt fork) Headers
+#include "panel/panel.h"
 
 // Qt Headers
 #include <QApplication>
@@ -227,11 +221,11 @@ bool Application::parseCommandLineArgs() {
         // load global application configuration
         settings_.load(profileName_);
         // Disable libfm-qt archiver integration; compression is handled in-process.
-        Fm::Archiver::setDefaultArchiver(nullptr);
+        Panel::Archiver::setDefaultArchiver(nullptr);
 
         // initialize per-folder config backed by dir-settings.conf
         const QString perFolderConfigFile = settings_.profileDir(profileName_) + QStringLiteral("/dir-settings.conf");
-        Fm::FolderConfig::init(perFolderConfigFile.toLocal8Bit().constData());
+        Panel::FolderConfig::init(perFolderConfigFile.toLocal8Bit().constData());
 
         if (settings_.useFallbackIconTheme()) {
             QIcon::setThemeName(settings_.fallbackIconThemeName());
@@ -337,7 +331,7 @@ void Application::onAboutToQuit() {
 
 void Application::cleanPerFolderConfig() {
     // flush the in-memory per-folder config so we know all currently customized folders
-    Fm::FolderConfig::saveCache();
+    Panel::FolderConfig::saveCache();
 
     // then remove non-existent native folders from the list of custom folders
     QByteArray perFolderConfig =
@@ -352,7 +346,7 @@ void Application::cleanPerFolderConfig() {
             const gchar* g = groups[i];
 
             // only clean native paths, leave virtual paths alone
-            if (Fm::FilePath::fromPathStr(g).isNative() && !QDir(QString::fromUtf8(g)).exists()) {
+            if (Panel::FilePath::fromPathStr(g).isNative() && !QDir(QString::fromUtf8(g)).exists()) {
                 g_key_file_remove_group(kf, g, nullptr);
                 removed = true;
             }
@@ -376,8 +370,8 @@ void Application::onSaveStateRequest(QSessionManager& /*manager*/) {
 }
 
 void Application::onFindFileAccepted() {
-    // FIX: Using dynamic_cast because Fm::FileSearchDialog might miss Q_OBJECT macro
-    auto* dlg = dynamic_cast<Fm::FileSearchDialog*>(sender());
+    // FIX: Using dynamic_cast because Panel::FileSearchDialog might miss Q_OBJECT macro
+    auto* dlg = dynamic_cast<Panel::FileSearchDialog*>(sender());
     if (!dlg) {
         return;
     }
@@ -392,7 +386,7 @@ void Application::onFindFileAccepted() {
     settings_.addNamePattern(dlg->namePattern());
     settings_.addContentPattern(dlg->contentPattern());
 
-    Fm::FilePathList paths;
+    Panel::FilePathList paths;
     paths.emplace_back(dlg->searchUri());
 
     MainWindow* window = MainWindow::lastActive();
@@ -408,8 +402,8 @@ void Application::onConnectToServerAccepted() {
 
     const QString uri = dlg->uriText();
 
-    Fm::FilePathList paths;
-    paths.push_back(Fm::FilePath::fromUri(uri.toUtf8().constData()));
+    Panel::FilePathList paths;
+    paths.push_back(Panel::FilePath::fromUri(uri.toUtf8().constData()));
 
     MainWindow* window = MainWindow::lastActive();
     Launcher(window).launchPaths(nullptr, paths);
@@ -417,7 +411,7 @@ void Application::onConnectToServerAccepted() {
 
 void Application::findFiles(QStringList paths) {
     // launch file searching utility with the given paths as search roots
-    auto* dlg = new Fm::FileSearchDialog(paths);
+    auto* dlg = new Panel::FileSearchDialog(paths);
     connect(dlg, &QDialog::accepted, this, &Application::onFindFileAccepted);
     dlg->setAttribute(Qt::WA_DeleteOnClose);
 
@@ -442,8 +436,8 @@ void Application::connectToServer() {
 }
 
 void Application::launchFiles(const QString& cwd, const QStringList& paths, bool inNewWindow, bool reopenLastTabs) {
-    Fm::FilePathList pathList;
-    Fm::FilePath cwdPath;
+    Panel::FilePathList pathList;
+    Panel::FilePath cwdPath;
     QStringList effectivePaths = paths;
 
     // optionally reopen last session tab paths if no explicit paths were supplied
@@ -456,24 +450,24 @@ void Application::launchFiles(const QString& cwd, const QStringList& paths, bool
 
     for (const QString& it : std::as_const(effectivePaths)) {
         const QByteArray pathName = it.toLocal8Bit();
-        Fm::FilePath path;
+        Panel::FilePath path;
 
         if (pathName == "~") {
             // home directory shortcut
-            path = Fm::FilePath::homeDir();
+            path = Panel::FilePath::homeDir();
         }
         else if (!pathName.isEmpty() && pathName[0] == '/') {
             // absolute local path
-            path = Fm::FilePath::fromLocalPath(pathName.constData());
+            path = Panel::FilePath::fromLocalPath(pathName.constData());
         }
         else if (pathName.contains(":/")) {
             // URI such as file://, smb://, etc
-            path = Fm::FilePath::fromUri(pathName.constData());
+            path = Panel::FilePath::fromUri(pathName.constData());
         }
         else {
             // relative path, resolved against the caller's working directory
             if (Q_UNLIKELY(!cwdPath)) {
-                cwdPath = Fm::FilePath::fromLocalPath(cwd.toLocal8Bit().constData());
+                cwdPath = Panel::FilePath::fromLocalPath(cwd.toLocal8Bit().constData());
             }
             path = cwdPath.relativePath(pathName.constData());
         }
@@ -532,15 +526,15 @@ void Application::launchFiles(const QString& cwd, const QStringList& paths, bool
     }
 }
 
-void Application::openFolders(Fm::FileInfoList files) {
+void Application::openFolders(Panel::FileInfoList files) {
     Launcher(nullptr).launchFiles(nullptr, std::move(files));
 }
 
-void Application::openFolderInTerminal(Fm::FilePath path) {
+void Application::openFolderInTerminal(Panel::FilePath path) {
     if (!settings_.terminal().isEmpty()) {
-        Fm::GErrorPtr err;
+        Panel::GErrorPtr err;
         const QByteArray terminalName = settings_.terminal().toUtf8();
-        if (!Fm::launchTerminal(terminalName.constData(), path, err)) {
+        if (!Panel::launchTerminal(terminalName.constData(), path, err)) {
             QMessageBox::critical(nullptr, tr("Error"), err.message());
         }
     }
@@ -582,12 +576,12 @@ void Application::ShowFolders(const QStringList& uriList, const QString& startup
 void Application::ShowItems(const QStringList& uriList, const QString& startupId) {
     Q_UNUSED(startupId);
 
-    std::unordered_map<Fm::FilePath, Fm::FilePathList, Fm::FilePathHash> groups;
-    Fm::FilePathList folders;  // used only for preserving the original parent order
+    std::unordered_map<Panel::FilePath, Panel::FilePathList, Panel::FilePathHash> groups;
+    Panel::FilePathList folders;  // used only for preserving the original parent order
 
     for (const auto& u : uriList) {
         const QByteArray utf8 = u.toUtf8();
-        if (auto path = Fm::FilePath::fromPathStr(utf8.constData())) {
+        if (auto path = Panel::FilePath::fromPathStr(utf8.constData())) {
             if (auto parent = path.parent()) {
                 auto& paths = groups[parent];
                 if (std::find(paths.cbegin(), paths.cend(), path) == paths.cend()) {
@@ -641,10 +635,10 @@ void Application::ShowItemProperties(const QStringList& uriList, const QString& 
     Q_UNUSED(startupId);
 
     // resolve URIs into paths and show a properties dialog for each item
-    Fm::FilePathList paths;
+    Panel::FilePathList paths;
     for (const auto& u : uriList) {
         const QByteArray utf8 = u.toUtf8();
-        Fm::FilePath path = Fm::FilePath::fromPathStr(utf8.constData());
+        Panel::FilePath path = Panel::FilePath::fromPathStr(utf8.constData());
         if (path) {
             paths.push_back(std::move(path));
         }
@@ -653,20 +647,20 @@ void Application::ShowItemProperties(const QStringList& uriList, const QString& 
         return;
     }
 
-    auto* job = new Fm::FileInfoJob{std::move(paths)};
+    auto* job = new Panel::FileInfoJob{std::move(paths)};
     job->setAutoDelete(true);
-    connect(job, &Fm::FileInfoJob::finished, this, &Application::onPropJobFinished, Qt::BlockingQueuedConnection);
+    connect(job, &Panel::FileInfoJob::finished, this, &Application::onPropJobFinished, Qt::BlockingQueuedConnection);
     job->runAsync();
 }
 
 void Application::onPropJobFinished() {
-    auto* job = qobject_cast<Fm::FileInfoJob*>(sender());
+    auto* job = qobject_cast<Panel::FileInfoJob*>(sender());
     if (!job) {
         return;
     }
 
     for (auto file : job->files()) {
-        auto* dialog = Fm::FilePropsDialog::showForFile(std::move(file));
+        auto* dialog = Panel::FilePropsDialog::showForFile(std::move(file));
         dialog->raise();
         dialog->activateWindow();
     }
@@ -685,7 +679,7 @@ void Application::updateFromSettings() {
 
 void Application::editBookmarks() {
     if (!editBookmarksialog_) {
-        editBookmarksialog_ = new Fm::EditBookmarksDialog(Fm::Bookmarks::globalInstance());
+        editBookmarksialog_ = new Panel::EditBookmarksDialog(Panel::Bookmarks::globalInstance());
     }
     editBookmarksialog_.data()->show();
 }

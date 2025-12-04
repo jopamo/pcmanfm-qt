@@ -3,8 +3,9 @@
 This file tracks work items, planned features, and technical debt for the PCManFM-Qt project. Maintainers and contributors can use this to coordinate development efforts.
 
 ## Modernization and Backend Work
-- [ ] Add a POSIX-only filesystem core (native-byte paths, explicit errors) with read/write/rename/remove/make_dir_parents/set_permissions and unit coverage
-- [ ] Convert `src/backends/qt/qt_fileops.*` into the thin Qt adapter that calls the POSIX core (Qt only for path conversion + signals)
+- [x] Add a POSIX-only filesystem core (native-byte paths, explicit errors) with read/write/rename/remove/make_dir_parents/set_permissions and unit coverage
+- [x] Convert `src/backends/qt/qt_fileops.*` into the thin Qt adapter that calls the POSIX core (Qt only for path conversion + signals)
+- [x] Vendor libfm-qt in-tree under the `Panel::*` namespace and drop the external `find_package(fm-qt6)` usage
 - [ ] Route real file mutations in app code through `IFileOps`/the core (copy/move/delete/rename/mkdir/permissions/config writes) in: `pcmanfm/mainwindow_fileops.cpp`, `pcmanfm/mainwindow.cpp`, `pcmanfm/filepropertiesdialog.cpp`, `pcmanfm/xdgdir.cpp`, `pcmanfm/application.cpp`, `pcmanfm/settings.cpp`
 - [ ] Keep UI-only metadata/listing in Qt but add a guard/grep check to prevent `QFile`/`QSaveFile`/`QDir` mutations outside adapters (`backends/qt` + UI discovery)
 - [ ] Expand Qt backend coverage (remote URIs, trash, volumes) without GIO once the POSIX core is in place

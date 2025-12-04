@@ -13,7 +13,7 @@
 
 namespace PCManFM {
 
-void MainWindow::chdir(Fm::FilePath path, ViewFrame* viewFrame) {
+void MainWindow::chdir(Panel::FilePath path, ViewFrame* viewFrame) {
     if (!viewFrame) {
         return;
     }
@@ -31,10 +31,10 @@ void MainWindow::chdir(Fm::FilePath path, ViewFrame* viewFrame) {
             }
             else {
                 // Update background view frames' location bar
-                if (auto* pathBar = qobject_cast<Fm::PathBar*>(viewFrame->getTopBar())) {
+                if (auto* pathBar = qobject_cast<Panel::PathBar*>(viewFrame->getTopBar())) {
                     pathBar->setPath(page->path());
                 }
-                else if (auto* pathEntry = qobject_cast<Fm::PathEdit*>(viewFrame->getTopBar())) {
+                else if (auto* pathEntry = qobject_cast<Panel::PathEdit*>(viewFrame->getTopBar())) {
                     pathEntry->setText(page->pathName());
                 }
             }
@@ -73,7 +73,7 @@ void MainWindow::on_actionGoForward_triggered() {
 }
 
 void MainWindow::on_actionHome_triggered() {
-    chdir(Fm::FilePath::homeDir());
+    chdir(Panel::FilePath::homeDir());
 }
 
 void MainWindow::on_actionReload_triggered() {
@@ -91,17 +91,17 @@ void MainWindow::on_actionReload_triggered() {
 }
 
 void MainWindow::on_actionApplications_triggered() {
-    chdir(Fm::FilePath::fromUri("menu://applications/"));
+    chdir(Panel::FilePath::fromUri("menu://applications/"));
 }
 
 void MainWindow::on_actionTrash_triggered() {
-    chdir(Fm::FilePath::fromUri("trash:///"));
+    chdir(Panel::FilePath::fromUri("trash:///"));
 }
 
 void MainWindow::on_actionDesktop_triggered() {
     const QString desktop = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
     if (!desktop.isEmpty()) {
-        chdir(Fm::FilePath::fromLocalPath(desktop.toLocal8Bit().constData()));
+        chdir(Panel::FilePath::fromLocalPath(desktop.toLocal8Bit().constData()));
     }
 }
 

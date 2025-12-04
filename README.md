@@ -2,10 +2,12 @@
 
 ## Overview
 
-PCManFM-Qt is a Qt-based file manager which uses `GLib` for file management.
-It was started as the Qt port of PCManFM, the file manager of [LXDE](https://lxde.org).
+PCManFM-Qt is a Qt-based file manager. It was started as the Qt port of PCManFM, the file manager of
+[LXDE](https://lxde.org).
 
-This version is a standalone file manager without desktop functionality or Wayland support.
+This fork vendors the libfm-qt code we still rely on (exposed under the `Panel::*` namespace) and is
+modernizing toward a Qt/POSIX backend stack. It is Linux-only, Qt 6-only, and ships without desktop
+functionality or Wayland shell integration.
 
 PCManFM-Qt is licensed under the terms of the
 [GPLv2](https://www.gnu.org/licenses/gpl-2.0.en.html) or any later version. See
@@ -15,32 +17,36 @@ file LICENSE for its full text.
 
 ### Compiling source code
 
-The build dependencies are CMake, [lxqt-build-tools](https://github.com/lxqt/lxqt-build-tools),
-and [libfm-qt](https://github.com/lxqt/libfm-qt).
+Build dependencies:
 
-GVFS is an optional dependency. It provides important functionalities like Trash support.
+- CMake 3.18+
+- Qt 6.6+ (Widgets, DBus, LinguistTools)
+- [lxqt-build-tools](https://github.com/lxqt/lxqt-build-tools) 2.x
+- GLib/GIO/MenuCache (and related) development packages needed by the vendored libfm-qt code
+
+You do **not** need an external libfm-qt package; the bundled copy in `libfm-qt/` is built in-tree
+and linked directly.
 
 **Build Instructions:**
 
-1. Create a build directory:
+1. Configure out-of-source:
    ```bash
-   mkdir build
-   cd build
+   cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
    ```
 
-2. Configure with CMake:
+2. Build:
    ```bash
-   cmake ..
+   cmake --build build -j"$(nproc)"
    ```
 
-3. Build the project:
+3. (Optional) run tests:
    ```bash
-   make
+   (cd build && ctest --output-on-failure)
    ```
 
-4. Install (optional):
+4. (Optional) install:
    ```bash
-   sudo make install
+   cmake --install build
    ```
 
 The CMake variable `CMAKE_INSTALL_PREFIX` can be set to `/usr` on most operating systems.
@@ -69,4 +75,3 @@ Translations can be done in [LXQt-Weblate](https://translate.lxqt-project.org/pr
 <a href="https://translate.lxqt-project.org/projects/lxqt-desktop/pcmanfm-qt/">
 <img src="https://translate.lxqt-project.org/widgets/lxqt-desktop/-/pcmanfm-qt/multi-auto.svg" alt="Translation status" />
 </a>
-

@@ -56,20 +56,12 @@ G_LOCK_DEFINE_STATIC(vfs);
 G_DEFINE_INTERFACE(FmFile, fm_file, G_TYPE_FILE)
 
 static gboolean fm_file_wants_incremental_false(GFile* unused) {
+    (void)unused;
     return FALSE;
 }
 
 static void fm_file_default_init(FmFileInterface* iface) {
     iface->wants_incremental = fm_file_wants_incremental_false;
-}
-
-static inline FmFileInitTable* fm_find_scheme(const char* name) {
-    FmFileInitTable* t;
-    CHECK_MODULES();
-    G_LOCK(vfs);
-    t = (FmFileInitTable*)g_hash_table_lookup(schemes, name);
-    G_UNLOCK(vfs);
-    return t;
 }
 
 /**

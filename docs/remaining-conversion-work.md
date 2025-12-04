@@ -10,8 +10,8 @@ This document outlines the remaining work needed to complete the migration from 
 
 - **Core Interfaces**: `IFileInfo`, `IFolderModel`, `IFileOps`, `ITrashBackend`, `IVolumeBackend`, `IRemoteBackend`
 - **Qt Backend**: `QtFileInfo`, `QtFolderModel`, `QtFileOps` implementations
-- **GIO Backend**: `GioTrashBackend`, `GioVolumeBackend`, `GioRemoteBackend` implementations
 - **Backend Registry**: `BackendRegistry` for creating backend instances
+- **GIO Backends**: removed; current build is Qt/POSIX-only
 - **Build System**: New backend files included in CMakeLists.txt
 
 ### ❌ Major libfm/libfm-qt Dependencies Remaining
@@ -189,31 +189,16 @@ Based on current libfm-qt usage, these additional backend interfaces are needed:
 ### Current libfm-qt Dependencies in CMake
 
 **Main CMakeLists.txt:**
-```cmake
-find_package(fm-qt6 ${LIBFMQT_MINIMUM_VERSION} REQUIRED)
-```
+- add_subdirectory(libfm-qt) to build the vendored lib in-tree
 
 **pcmanfm/CMakeLists.txt:**
-```cmake
-target_link_libraries(pcmanfm-qt
-    Qt6::Widgets
-    Qt6::DBus
-    fm-qt6  # <-- libfm-qt dependency
-    ${GIO_LIBRARIES}
-)
-
-target_compile_definitions(pcmanfm-qt
-    PRIVATE
-        LIBFM_DATA_DIR="${PKG_FM_PREFIX}/share/libfm"  # <-- libfm data dir
-)
-```
+- target_link_libraries(pcmanfm-qt Qt6::Widgets Qt6::DBus fm-qt6)
 
 ### Required Changes
 
-1. Remove `find_package(fm-qt6)` from main CMakeLists.txt
-2. Remove `fm-qt6` from target_link_libraries
-3. Remove `LIBFM_DATA_DIR` compile definition
-4. Update any remaining libfm data file references
+1. Optionally rename the fm-qt6 target and headers to the new Panel naming.
+2. Remove `LIBFM_DATA_DIR` compile definition if no longer needed.
+3. Update any remaining libfm data file references.
 
 ## Conversion Strategy
 

@@ -48,7 +48,7 @@ QPixmap pixmapFromMagickBuffer(const ImageMagickBuffer& buf) {
     }
 
     if (!bufferMatchesSize(buf)) {
-        qCWarning(kMagickLog) << "Magick buffer size mismatch" << buf.width << buf.height;
+        qCWarning(kMagickLog, "Magick buffer size mismatch (%d x %d)", buf.width, buf.height);
         return {};
     }
 
@@ -77,7 +77,7 @@ QImage createThumbnailImageMagick(const QString& path, const QSize& thumbSize) {
     }
 
     if (!bufferMatchesSize(buffer)) {
-        qCWarning(kMagickLog) << "Magick buffer size mismatch" << buffer.width << buffer.height;
+        qCWarning(kMagickLog, "Magick buffer size mismatch (%d x %d)", buffer.width, buffer.height);
         return {};
     }
 
@@ -131,7 +131,7 @@ QPixmap createImagePixmapMagick(const QString& path) {
 }
 
 ImageMagickProxyFolderModel::ImageMagickProxyFolderModel(QObject* parent)
-    : Fm::ProxyFolderModel(parent), magickThumbnailsEnabled_(false), magickThumbnailSize_(0) {
+    : Panel::ProxyFolderModel(parent), magickThumbnailsEnabled_(false), magickThumbnailSize_(0) {
     thumbnailCache_.setMaxCost(256);
     const int ideal = QThread::idealThreadCount();
     const int threads = std::clamp(ideal > 0 ? ideal / 2 : 2, 2, 4);
@@ -144,7 +144,7 @@ void ImageMagickProxyFolderModel::setShowThumbnails(bool show) {
     thumbnailCache_.clear();
     pendingThumbnails_.clear();
     inFlightThumbnails_.clear();
-    Fm::ProxyFolderModel::setShowThumbnails(show);
+    Panel::ProxyFolderModel::setShowThumbnails(show);
 }
 
 void ImageMagickProxyFolderModel::setThumbnailSize(int size) {
@@ -152,7 +152,7 @@ void ImageMagickProxyFolderModel::setThumbnailSize(int size) {
     thumbnailCache_.clear();
     pendingThumbnails_.clear();
     inFlightThumbnails_.clear();
-    Fm::ProxyFolderModel::setThumbnailSize(size);
+    Panel::ProxyFolderModel::setThumbnailSize(size);
 }
 
 QVariant ImageMagickProxyFolderModel::data(const QModelIndex& index, int role) const {
@@ -174,7 +174,7 @@ QVariant ImageMagickProxyFolderModel::data(const QModelIndex& index, int role) c
         }
     }
 
-    return Fm::ProxyFolderModel::data(index, role);
+    return Panel::ProxyFolderModel::data(index, role);
 }
 
 void ImageMagickProxyFolderModel::prefetchThumbnails(const QModelIndexList& indexes) const {
@@ -190,11 +190,11 @@ void ImageMagickProxyFolderModel::prefetchThumbnails(const QModelIndexList& inde
     }
 }
 
-bool ImageMagickProxyFolderModel::isImageFile(const std::shared_ptr<const Fm::FileInfo>& info) const {
+bool ImageMagickProxyFolderModel::isImageFile(const std::shared_ptr<const Panel::FileInfo>& info) const {
     return info && info->isImage() && info->canThumbnail();
 }
 
-QString ImageMagickProxyFolderModel::pathForFile(const std::shared_ptr<const Fm::FileInfo>& info) const {
+QString ImageMagickProxyFolderModel::pathForFile(const std::shared_ptr<const Panel::FileInfo>& info) const {
     if (!info || !info->isNative()) {
         return {};
     }
@@ -210,7 +210,7 @@ QString ImageMagickProxyFolderModel::cacheKey(const QString& path, int size, qui
 }
 
 void ImageMagickProxyFolderModel::requestThumbnailForIndex(const QModelIndex& index,
-                                                           const std::shared_ptr<const Fm::FileInfo>& info) const {
+                                                           const std::shared_ptr<const Panel::FileInfo>& info) const {
     if (!index.isValid() || !info) {
         return;
     }

@@ -75,28 +75,28 @@ void MainWindow::forEachTabPageGlobal(Func func) {
 
 void MainWindow::on_actionIconView_triggered() {
     if (auto* page = currentPage()) {
-        page->setViewMode(Fm::FolderView::IconMode);
+        page->setViewMode(Panel::FolderView::IconMode);
         setTabIcon(page);
     }
 }
 
 void MainWindow::on_actionCompactView_triggered() {
     if (auto* page = currentPage()) {
-        page->setViewMode(Fm::FolderView::CompactMode);
+        page->setViewMode(Panel::FolderView::CompactMode);
         setTabIcon(page);
     }
 }
 
 void MainWindow::on_actionDetailedList_triggered() {
     if (auto* page = currentPage()) {
-        page->setViewMode(Fm::FolderView::DetailedListMode);
+        page->setViewMode(Panel::FolderView::DetailedListMode);
         setTabIcon(page);
     }
 }
 
 void MainWindow::on_actionThumbnailView_triggered() {
     if (auto* page = currentPage()) {
-        page->setViewMode(Fm::FolderView::ThumbnailMode);
+        page->setViewMode(Panel::FolderView::ThumbnailMode);
         setTabIcon(page);
     }
 }
@@ -178,49 +178,49 @@ void MainWindow::on_actionGoToCustomizedViewSource_triggered() {
 
 void MainWindow::on_actionByFileName_triggered(bool /*checked*/) {
     if (auto* page = currentPage()) {
-        page->sort(Fm::FolderModel::ColumnFileName, page->sortOrder());
+        page->sort(Panel::FolderModel::ColumnFileName, page->sortOrder());
     }
 }
 
 void MainWindow::on_actionByMTime_triggered(bool /*checked*/) {
     if (auto* page = currentPage()) {
-        page->sort(Fm::FolderModel::ColumnFileMTime, page->sortOrder());
+        page->sort(Panel::FolderModel::ColumnFileMTime, page->sortOrder());
     }
 }
 
 void MainWindow::on_actionByCrTime_triggered(bool /*checked*/) {
     if (auto* page = currentPage()) {
-        page->sort(Fm::FolderModel::ColumnFileCrTime, page->sortOrder());
+        page->sort(Panel::FolderModel::ColumnFileCrTime, page->sortOrder());
     }
 }
 
 void MainWindow::on_actionByDTime_triggered(bool /*checked*/) {
     if (auto* page = currentPage()) {
-        page->sort(Fm::FolderModel::ColumnFileDTime, page->sortOrder());
+        page->sort(Panel::FolderModel::ColumnFileDTime, page->sortOrder());
     }
 }
 
 void MainWindow::on_actionByOwner_triggered(bool /*checked*/) {
     if (auto* page = currentPage()) {
-        page->sort(Fm::FolderModel::ColumnFileOwner, page->sortOrder());
+        page->sort(Panel::FolderModel::ColumnFileOwner, page->sortOrder());
     }
 }
 
 void MainWindow::on_actionByGroup_triggered(bool /*checked*/) {
     if (auto* page = currentPage()) {
-        page->sort(Fm::FolderModel::ColumnFileGroup, page->sortOrder());
+        page->sort(Panel::FolderModel::ColumnFileGroup, page->sortOrder());
     }
 }
 
 void MainWindow::on_actionByFileSize_triggered(bool /*checked*/) {
     if (auto* page = currentPage()) {
-        page->sort(Fm::FolderModel::ColumnFileSize, page->sortOrder());
+        page->sort(Panel::FolderModel::ColumnFileSize, page->sortOrder());
     }
 }
 
 void MainWindow::on_actionByFileType_triggered(bool /*checked*/) {
     if (auto* page = currentPage()) {
-        page->sort(Fm::FolderModel::ColumnFileType, page->sortOrder());
+        page->sort(Panel::FolderModel::ColumnFileType, page->sortOrder());
     }
 }
 
