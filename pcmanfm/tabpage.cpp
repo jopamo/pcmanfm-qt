@@ -878,7 +878,11 @@ void TabPage::saveFolderSorting() {
         return;
     }
     folderSettings_.setSortOrder(proxyModel_->sortOrder());
-    folderSettings_.setSortColumn(static_cast<Panel::FolderModel::ColumnId>(proxyModel_->sortColumn()));
+    int sortCol = proxyModel_->sortColumn();
+    Panel::FolderModel::ColumnId columnId = (sortCol >= 0 && sortCol < Panel::FolderModel::NumOfColumns)
+                                                ? static_cast<Panel::FolderModel::ColumnId>(sortCol)
+                                                : Panel::FolderModel::ColumnFileName;
+    folderSettings_.setSortColumn(columnId);
     folderSettings_.setSortFolderFirst(proxyModel_->folderFirst());
     folderSettings_.setSortHiddenLast(proxyModel_->hiddenLast());
     folderSettings_.setSortCaseSensitive(proxyModel_->sortCaseSensitivity());

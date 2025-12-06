@@ -355,7 +355,11 @@ void FileDialogHelper::saveSettings() {
     if (settings.value("Mode"_L1) != mode) {
         settings.setValue("Mode"_L1, mode);
     }
-    QString sortColumn = sortColumnToString(static_cast<Fm::FolderModel::ColumnId>(dlg_->sortColumn()));
+    int sortCol = dlg_->sortColumn();
+    Fm::FolderModel::ColumnId columnId = (sortCol >= 0 && sortCol < Fm::FolderModel::NumOfColumns)
+                                             ? static_cast<Fm::FolderModel::ColumnId>(sortCol)
+                                             : Fm::FolderModel::ColumnFileName;
+    QString sortColumn = sortColumnToString(columnId);
     if (settings.value("SortColumn"_L1) != sortColumn) {
         settings.setValue("SortColumn"_L1, sortColumn);
     }

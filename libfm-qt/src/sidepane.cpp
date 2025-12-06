@@ -31,7 +31,13 @@
 namespace Fm {
 
 SidePane::SidePane(QWidget* parent)
-    : QWidget(parent), view_(nullptr), combo_(nullptr), iconSize_(24, 24), mode_(ModeNone), showHidden_(false) {
+    : QWidget(parent),
+      currentPath_(Fm::FilePath::fromLocalPath("/")),
+      view_(nullptr),
+      combo_(nullptr),
+      iconSize_(24, 24),
+      mode_(ModeNone),
+      showHidden_(false) {
     verticalLayout = new QVBoxLayout(this);
     verticalLayout->setContentsMargins(0, 0, 0, 0);
 

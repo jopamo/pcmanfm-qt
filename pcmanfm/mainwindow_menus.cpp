@@ -264,7 +264,10 @@ void MainWindow::updateUIForCurrentPage(bool setFocus) {
 
         // update side pane
         if (ui.sidePane) {
-            ui.sidePane->setCurrentPath(tabPage->path());
+            Panel::FilePath currentPath = tabPage->path();
+            if (currentPath) {
+                ui.sidePane->setCurrentPath(currentPath);
+            }
             ui.sidePane->setShowHidden(tabPage->showHidden());
         }
 
