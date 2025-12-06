@@ -26,7 +26,7 @@ Concretely:
   * directory models and views
   * metadata, MIME types, icons
   * configuration, standard paths
-* **No libfm / libfm-qt anywhere in the build**
+* **Minimal libfm/libfm-qt dependencies**; incorporate only essential components that can be adapted to use the new backend interfaces
 * **Backends are swappable** behind narrow interfaces in `src/core/`
 * **Filesystem layering:** real file mutations happen in a POSIX-only core; Qt handles UI, metadata, and path conversion only
 
@@ -67,7 +67,7 @@ src/
 
 * `ui/` knows only about `core/*` interfaces
 * `backends/qt` uses Qt and standard C++ only
-* libfm-qt code is vendored in-tree under the `Panel::*` namespace; no external libfm/libfm-qt dependency
+* libfm-qt code is vendored in-tree under the `Panel::*` namespace; essential components may be adapted rather than replaced, but external libfm/libfm-qt dependency is eliminated
 
 ### 3.2 Core Interfaces (Qt-centric)
 
@@ -272,7 +272,7 @@ Removed from the in-tree build. If trash/volume/remote helpers are needed later,
 3. Change UI code in `src/ui/` and `pcmanfm/` to talk to `IFileOps` and the core for real mutations (copy/move/delete/rename/mkdir/permissions/config writes). Keep UI-only metadata and listing in Qt.
 4. Provide a Qt-only configuration (`BackendRegistry::initDefaults()` with only Qt backends) so local file management works without libfm.
 5. Keep the build Qt/POSIX-only; if trash/volume/remote helpers are needed later, add them out-of-tree.
-6. Remove libfm/libfm-qt includes, linkage, and build options.
+6. Adapt libfm/libfm-qt components to use the new backend interfaces; remove external dependencies and GLib/GIO usage while preserving valuable Qt widget implementations.
 
 ### 5.2 Example usage in UI code
 
@@ -383,6 +383,7 @@ Run from build tree:
 When touching old code that still references libfm/libfm-qt:
 
 * Replace libfm operations with `IFileOps` that delegates to the POSIX core (no new direct `QFile`/`QDir` mutations in UI code)
+* Consider adapting libfm-qt UI components to use new backend interfaces instead of rewriting from scratch when they provide significant value
 * Keep Qt metadata helpers (`QFileInfo`, `QMimeDatabase`, icons) for UI/display only
 * Move new behavior into the Qt backends, backed by the POSIX core, instead of direct usage in `ui/`
 * Keep platform assumptions Linux-only (no Windows or legacy Unix shims)
@@ -435,7 +436,7 @@ The POSIX filesystem core currently supports regular files/dirs with atomic writ
 
 ### Modernization-specific checks
 
-* No new direct libfm/libfm-qt includes
+* Minimize new libfm/libfm-qt includes; prefer using adapted components through the new backend interfaces
 * New code uses Qt and the core interfaces instead of libfm APIs
 * Behavior matches or improves on the legacy implementation where it matters
 

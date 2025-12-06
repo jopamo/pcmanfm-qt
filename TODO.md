@@ -11,7 +11,7 @@ This file tracks work items, planned features, and technical debt for the PCManF
 - [ ] Expand Qt backend coverage (remote URIs, trash, volumes) without GIO once the POSIX core is in place
 - [x] Replace libfm-qt archiver actions with in-process tar/tar.zst compression backed by POSIX I/O + libarchive
 - [x] Add in-process tar.zst extraction (libarchive + POSIX) wired to the context menu for native archives
-- [ ] Remove legacy libfm/libfm-qt code paths and includes
+- [ ] Adapt or remove legacy libfm/libfm-qt code paths and includes; preserve valuable Qt widget implementations
 
 ## UI/UX Improvements
 - [ ] Harden keyboard navigation and shortcuts (focus/selection in split view, Delete handling)

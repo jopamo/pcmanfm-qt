@@ -1456,19 +1456,148 @@ static void get_socket_name(char* buf, int len) {
 }
 
 #define MAX_RETRIES 25
+static char* discover_menu_cached_dir(void) {
+    char* exe_path = NULL;
+    char* candidate = NULL;
+    char* dir = NULL;
+
+    char* cwd = g_get_current_dir();
+    g_printerr("discover_menu_cached_dir: starting discovery, cwd=%s\n", cwd);
+    g_free(cwd);
+    fflush(stdout);
+
+    /* Try relative to executable */
+#ifdef __linux__
+    exe_path = g_file_read_link("/proc/self/exe", NULL);
+    if (exe_path) {
+        g_printerr("discover_menu_cached_dir: exe_path=%s\n", exe_path);
+        fflush(stdout);
+        char* exe_dir = g_path_get_dirname(exe_path);
+        g_printerr("discover_menu_cached_dir: exe_dir=%s\n", exe_dir);
+        fflush(stdout);
+        /* Try ../menu-cache/menu-cached */
+        candidate = g_build_filename(exe_dir, "..", "menu-cache", "menu-cached", NULL);
+        g_printerr("discover_menu_cached_dir: trying candidate=%s\n", candidate);
+        fflush(stdout);
+        if (g_file_test(candidate, G_FILE_TEST_IS_EXECUTABLE)) {
+            g_printerr("discover_menu_cached_dir: found at %s\n", candidate);
+            fflush(stdout);
+            dir = g_path_get_dirname(candidate);
+            g_free(candidate);
+            g_free(exe_dir);
+            g_free(exe_path);
+            return dir;
+        }
+        g_free(candidate);
+        /* Try ../../menu-cache/menu-cached */
+        candidate = g_build_filename(exe_dir, "..", "..", "menu-cache", "menu-cached", NULL);
+        g_printerr("discover_menu_cached_dir: trying candidate=%s\n", candidate);
+        fflush(stdout);
+        if (g_file_test(candidate, G_FILE_TEST_IS_EXECUTABLE)) {
+            g_printerr("discover_menu_cached_dir: found at %s\n", candidate);
+            fflush(stdout);
+            dir = g_path_get_dirname(candidate);
+            g_free(candidate);
+            g_free(exe_dir);
+            g_free(exe_path);
+            return dir;
+        }
+        g_free(candidate);
+        g_free(exe_dir);
+        g_free(exe_path);
+    }
+#endif
+
+    /* Try current directory */
+    candidate = g_build_filename(".", "menu-cache", "menu-cached", NULL);
+    g_printerr("discover_menu_cached_dir: trying current dir candidate=%s\n", candidate);
+    fflush(stdout);
+    if (g_file_test(candidate, G_FILE_TEST_IS_EXECUTABLE)) {
+        g_printerr("discover_menu_cached_dir: found at %s\n", candidate);
+        fflush(stdout);
+        dir = g_path_get_dirname(candidate);
+        g_free(candidate);
+        return dir;
+    }
+    g_free(candidate);
+
+    /* Try build directory from environment */
+    const char* pwd = g_getenv("PWD");
+    if (pwd) {
+        g_printerr("discover_menu_cached_dir: PWD=%s\n", pwd);
+        fflush(stdout);
+        candidate = g_build_filename(pwd, "build", "menu-cache", "menu-cached", NULL);
+        g_printerr("discover_menu_cached_dir: trying build dir candidate=%s\n", candidate);
+        fflush(stdout);
+        if (g_file_test(candidate, G_FILE_TEST_IS_EXECUTABLE)) {
+            g_printerr("discover_menu_cached_dir: found at %s\n", candidate);
+            fflush(stdout);
+            dir = g_path_get_dirname(candidate);
+            g_free(candidate);
+            return dir;
+        }
+        g_free(candidate);
+    }
+
+    g_printerr("discover_menu_cached_dir: not found\n");
+    fflush(stdout);
+    return NULL;
+}
+
+static const char* get_menu_cache_libexec_dir(void) {
+    const char* env = g_getenv("MENUCACHE_LIBEXECDIR");
+    DEBUG("MENUCACHE_LIBEXECDIR env=%s, macro=%s", env ? env : "(null)", MENUCACHE_LIBEXECDIR);
+    g_printerr("MENUCACHE_LIBEXECDIR env=%s, macro=%s\n", env ? env : "(null)", MENUCACHE_LIBEXECDIR);
+    fflush(stdout);
+    if (env != NULL) {
+        return env;
+    }
+
+    /* Check if the macro path exists */
+    char* macro_path = g_build_path("/", MENUCACHE_LIBEXECDIR, "menu-cached", NULL);
+    if (g_file_test(macro_path, G_FILE_TEST_IS_EXECUTABLE)) {
+        g_free(macro_path);
+        return MENUCACHE_LIBEXECDIR;
+    }
+    g_free(macro_path);
+
+    /* Try to discover */
+    static char* discovered_dir = NULL;
+    static gsize discovered_init = 0;
+    if (g_once_init_enter(&discovered_init)) {
+        discovered_dir = discover_menu_cached_dir();
+        g_once_init_leave(&discovered_init, 1);
+    }
+
+    if (discovered_dir != NULL) {
+        return discovered_dir;
+    }
+
+    /* Fallback to macro (will cause error) */
+    return MENUCACHE_LIBEXECDIR;
+}
 
 static gboolean fork_server(const char* path) {
+    write(STDERR_FILENO, "fork_server entered\n", 20);
     int ret, pid, status;
+    const char* libexec_dir = get_menu_cache_libexec_dir();
+    char* daemon_path = g_build_path("/", libexec_dir, "menu-cached", NULL);
+    DEBUG("daemon_path=%s", daemon_path);
+    g_printerr("Checking daemon at %s\n", daemon_path);
+    fflush(stdout);
 
-    if (!g_file_test(MENUCACHE_LIBEXECDIR "/menu-cached", G_FILE_TEST_IS_EXECUTABLE)) {
+    if (!g_file_test(daemon_path, G_FILE_TEST_IS_EXECUTABLE)) {
+        g_printerr("Daemon not executable at %s\n", daemon_path);
+        fflush(stdout);
         g_error("failed to find menu-cached");
     }
 
     /* Start daemon */
     pid = fork();
     if (pid == 0) {
-        execl(MENUCACHE_LIBEXECDIR "/menu-cached", MENUCACHE_LIBEXECDIR "/menu-cached", path, NULL);
-        g_print("failed to exec %s %s\n", MENUCACHE_LIBEXECDIR "/menu-cached", path);
+        execl(daemon_path, daemon_path, path, NULL);
+        g_printerr("failed to exec %s %s\n", daemon_path, path);
+        fflush(stdout);
     }
 
     /*
@@ -1480,6 +1609,7 @@ retry_wait:
         if (errno == EINTR)
             goto retry_wait;
     }
+    g_free(daemon_path);
     return TRUE;
 }
 

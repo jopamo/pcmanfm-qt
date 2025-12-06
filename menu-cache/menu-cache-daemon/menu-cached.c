@@ -199,6 +199,13 @@ static void pre_exec(gpointer user_data) {
     set_env(*++env, "XDG_DATA_HOME");
     set_env(*++env, "CACHE_GEN_VERSION");
 }
+static const char* get_menu_cache_libexec_dir(void) {
+    const char* env = g_getenv("MENUCACHE_LIBEXECDIR");
+    if (env != NULL) {
+        return env;
+    }
+    return MENUCACHE_LIBEXECDIR;
+}
 
 static gboolean regenerate_cache(const char* menu_name,
                                  const char* lang_name,
@@ -210,7 +217,9 @@ static gboolean regenerate_cache(const char* menu_name,
     int n_files, status = 0;
     char** files;
     const char* user_data_dir = env[5];
-    const char* argv[] = {MENUCACHE_LIBEXECDIR "/menu-cache-gen", "-l", NULL, "-i", NULL, "-o", NULL, NULL};
+    const char* libexec_dir = get_menu_cache_libexec_dir();
+    char* gen_path = g_build_path("/", libexec_dir, "menu-cache-gen", NULL);
+    const char* argv[] = {gen_path, "-l", NULL, "-i", NULL, "-o", NULL, NULL};
     argv[2] = lang_name;
     argv[4] = menu_name;
     argv[6] = cache_file;
@@ -233,8 +242,10 @@ static gboolean regenerate_cache(const char* menu_name,
         DEBUG("error executing menu-cache-gen");
     }
     /* DEBUG("exit status of menu-cache-gen: %d", status); */
-    if (status != 0)
+    if (status != 0) {
+        g_free(gen_path);
         return FALSE;
+    }
 
     f = fopen(cache_file, "r");
     if (f) {
@@ -245,10 +256,13 @@ static gboolean regenerate_cache(const char* menu_name,
         }
         fclose(f);
     }
-    else
+    else {
+        g_free(gen_path);
         return FALSE;
+    }
     *n_used_files = n_files;
     *used_files = files;
+    g_free(gen_path);
     return TRUE;
 }
 
