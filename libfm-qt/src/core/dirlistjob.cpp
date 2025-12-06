@@ -6,7 +6,11 @@
 
 namespace Fm {
 
-DirListJob::DirListJob(const FilePath& path, Flags _flags) : dir_path{path}, flags{_flags} {}
+DirListJob::DirListJob(const FilePath& path, Flags _flags) : dir_path{path}, flags{_flags}, emit_files_found{false} {}
+
+void DirListJob::setIncremental(bool set) {
+    emit_files_found = set;
+}
 
 void DirListJob::exec() {
     GErrorPtr err;

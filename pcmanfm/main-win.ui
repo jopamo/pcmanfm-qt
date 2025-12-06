@@ -207,6 +207,7 @@
     <addaction name="actionHome"/>
     <addaction name="actionDesktop"/>
     <addaction name="actionApplications"/>
+    <addaction name="actionTrash"/>
     <addaction name="separator"/>
     <addaction name="actionGoBack"/>
     <addaction name="actionGoForward"/>
@@ -377,6 +378,11 @@
   <action name="actionApplications">
    <property name="text">
     <string>&amp;Applications</string>
+   </property>
+  </action>
+  <action name="actionTrash">
+   <property name="text">
+    <string>&amp;Trash</string>
    </property>
   </action>
   <action name="actionReload_2">
